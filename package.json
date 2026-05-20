@@ -38,7 +38,6 @@
 
     "@hookform/resolvers": "^3.3.4",
 
-    "@next/swc-win32-x64-msvc": "^14.1.0",
 
     "@prisma/client": "^5.10.0",
 
