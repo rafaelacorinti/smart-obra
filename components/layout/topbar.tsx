@@ -1,21 +1,23 @@
 "use client";
 
-import { Menu, Moon, Sun, LogOut, User } from "lucide-react";
+import { Menu, Moon, Sun, LogOut, User, Bell } from "lucide-react";
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useState, useEffect, useRef } from "react";
-import { NotificationsPanel } from "@/components/notifications-panel";
+import NotificationsPanel, { useNotificationCount } from "@/components/notifications-panel";
 import { GlobalSearch } from "@/components/global-search";
 
 export function Topbar() {
-  const { toggle, isOpen, openMobile } = useSidebarStore();
+  const { toggle, openMobile } = useSidebarStore();
   const { theme, setTheme } = useTheme();
   const { user } = useCurrentUser();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifCount = useNotificationCount();
 
   useEffect(() => {
     setMounted(true);
@@ -51,7 +53,25 @@ export function Topbar() {
       <div className="flex items-center gap-2">
         <GlobalSearch />
 
-        <NotificationsPanel />
+        {/* Notification bell with badge */}
+        <div className="relative">
+          <button
+            onClick={() => setShowNotifications((prev) => !prev)}
+            className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+            aria-label="Notificações"
+          >
+            <Bell className="h-5 w-5" />
+            {notifCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold leading-none text-white">
+                {notifCount > 99 ? "99+" : notifCount}
+              </span>
+            )}
+          </button>
+          <NotificationsPanel
+            open={showNotifications}
+            onClose={() => setShowNotifications(false)}
+          />
+        </div>
 
         {mounted && (
           <button

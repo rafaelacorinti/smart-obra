@@ -21,6 +21,7 @@ import {
   Sun,
   UserPlus,
   Clock,
+  Bell,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -1210,6 +1211,78 @@ function TabSolicitacoes() {
   );
 }
 
+// ─── Tab: Notificacoes ────────────────────────────────────────────────────────
+
+const NOTIFICATION_PREFS_KEY = "smart-obra-notification-prefs";
+
+interface NotificationPrefs {
+  estoqueBaixo: boolean;
+  manutencaoVencida: boolean;
+  osAtrasada: boolean;
+  pagamentoPendente: boolean;
+  documentoVencendo: boolean;
+}
+
+const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  estoqueBaixo: true,
+  manutencaoVencida: true,
+  osAtrasada: true,
+  pagamentoPendente: true,
+  documentoVencendo: true,
+};
+
+function TabNotificacoes() {
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
+
+  useEffect(() => {
+    setPrefs(ls<NotificationPrefs>(NOTIFICATION_PREFS_KEY, DEFAULT_NOTIFICATION_PREFS));
+  }, []);
+
+  function toggle(key: keyof NotificationPrefs) {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    lsSet(NOTIFICATION_PREFS_KEY, next);
+    showToast("Preferencias de notificacao salvas!");
+  }
+
+  const items: { key: keyof NotificationPrefs; label: string; desc: string }[] = [
+    { key: "estoqueBaixo", label: "Estoque baixo", desc: "Alertar quando um material atingir o estoque minimo" },
+    { key: "manutencaoVencida", label: "Manutencao vencida", desc: "Alertar quando um veiculo ultrapassar o km de manutencao" },
+    { key: "osAtrasada", label: "OS atrasada", desc: "Alertar quando uma ordem de servico estiver atrasada" },
+    { key: "pagamentoPendente", label: "Pagamento pendente", desc: "Alertar quando uma conta estiver vencida ou proxima do vencimento" },
+    { key: "documentoVencendo", label: "Documento vencendo", desc: "Alertar quando um documento de veiculo estiver proximo do vencimento" },
+  ];
+
+  return (
+    <SectionCard>
+      <SectionTitle icon={Bell} title="Preferencias de Notificacao" />
+      <p className="text-sm text-muted-foreground mb-4">
+        Escolha quais tipos de notificacao deseja receber no centro de notificacoes.
+      </p>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div key={item.key} className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/30 transition-colors">
+            <div>
+              <p className="text-sm font-medium">{item.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+            </div>
+            <button
+              onClick={() => toggle(item.key)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                prefs[item.key] ? "bg-primary" : "bg-muted-foreground/30"
+              }`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                prefs[item.key] ? "translate-x-4" : "translate-x-0.5"
+              }`} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConfiguracoesPage() {
@@ -1246,6 +1319,10 @@ export default function ConfiguracoesPage() {
             <Palette className="h-3.5 w-3.5" />
             Aparência
           </TabsTrigger>
+          <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm">
+            <Bell className="h-3.5 w-3.5" />
+            Notificações
+          </TabsTrigger>
           <TabsTrigger value="solicitacoes" className="gap-1.5 text-xs sm:text-sm">
             <UserPlus className="h-3.5 w-3.5" />
             Solicitações
@@ -1274,6 +1351,10 @@ export default function ConfiguracoesPage() {
 
         <TabsContent value="aparencia">
           <TabAparencia />
+        </TabsContent>
+
+        <TabsContent value="notificacoes">
+          <TabNotificacoes />
         </TabsContent>
 
         <TabsContent value="solicitacoes">

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -6,9 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Package, Plus, Pencil, Trash2, ArrowDownCircle, ArrowUpCircle,
-  AlertTriangle, Truck, TrendingDown, TrendingUp,
+  AlertTriangle, Truck, TrendingDown, TrendingUp, RotateCcw,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { PageHeader } from "@/components/ui/page-header";
@@ -39,6 +39,39 @@ function fmtDate(dateStr: string) {
   try { return format(parseISO(dateStr), "dd/MM/yyyy", { locale: ptBR }); }
   catch { return dateStr; }
 }
+
+type Categoria = "Cimento/Argamassa" | "Madeira" | "Ferro/Aco" | "Eletrica" | "Hidraulica" | "Pintura" | "Geral";
+
+function classifyMaterial(nome: string): Categoria {
+  const n = nome.toLowerCase();
+  if (/cimento|argamassa|concreto/.test(n)) return "Cimento/Argamassa";
+  if (/madeira|compensado|placa/.test(n)) return "Madeira";
+  if (/ferro|a[cç]o|vergalh|barra/.test(n)) return "Ferro/Aco";
+  if (/fio|el[eé]tric|cabo|disjuntor/.test(n)) return "Eletrica";
+  if (/tubo|hidr|cano|registro/.test(n)) return "Hidraulica";
+  if (/tinta|pintura|verniz/.test(n)) return "Pintura";
+  return "Geral";
+}
+
+const CATEGORIAS: Categoria[] = ["Cimento/Argamassa", "Madeira", "Ferro/Aco", "Eletrica", "Hidraulica", "Pintura", "Geral"];
+
+type Rotacao = "Alta" | "Media" | "Baixa";
+
+function computeRotacao(materialId: string, movimentacoes: MovimentacaoEstoque[]): Rotacao {
+  const limit = subDays(new Date(), 90);
+  const count = movimentacoes.filter(
+    (m) => m.materialId === materialId && new Date(m.data) >= limit
+  ).length;
+  if (count > 5) return "Alta";
+  if (count >= 2) return "Media";
+  return "Baixa";
+}
+
+const rotacaoBadge: Record<Rotacao, string> = {
+  Alta: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  Media: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  Baixa: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+};
 
 // --- Schemas -----------------------------------------------------------------
 
@@ -73,12 +106,10 @@ export default function EstoquePage() {
   const { fornecedores, createFornecedor, updateFornecedor, deleteFornecedor } = useFornecedores();
   const { obras } = useObras();
 
-  // Material dialog
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null);
 
-  // Movement dialog
   const [movDialogOpen, setMovDialogOpen] = useState(false);
   const [movMaterialId, setMovMaterialId] = useState("");
   const [movTipo, setMovTipo] = useState<"ENTRADA" | "SAIDA">("ENTRADA");
@@ -86,14 +117,13 @@ export default function EstoquePage() {
   const [movObraId, setMovObraId] = useState("");
   const [movMotivo, setMovMotivo] = useState("");
 
-  // Fornecedor dialog
   const [fornDialogOpen, setFornDialogOpen] = useState(false);
   const [editingFornId, setEditingFornId] = useState<string | null>(null);
   const [deleteFornId, setDeleteFornId] = useState<string | null>(null);
 
-  // Filters
   const [filterFornecedor, setFilterFornecedor] = useState("TODOS");
   const [filterAlerta, setFilterAlerta] = useState(false);
+  const [filterCategoria, setFilterCategoria] = useState("TODAS");
 
   const materialForm = useForm<MaterialForm>({
     resolver: zodResolver(materialSchema),
@@ -105,8 +135,6 @@ export default function EstoquePage() {
     defaultValues: { nome: "", cnpj: "", telefone: "", email: "", endereco: "" },
   });
 
-  // --- KPIs ------------------------------------------------------------------
-
   const kpis = useMemo(() => ({
     totalMateriais: materiais.length,
     emAlerta: materiais.filter((m) => m.quantidade <= m.estoqueMinimo).length,
@@ -114,17 +142,14 @@ export default function EstoquePage() {
     totalFornecedores: fornecedores.length,
   }), [materiais, fornecedores]);
 
-  // --- Filtered materials ----------------------------------------------------
-
   const materiaisFiltrados = useMemo(() => {
     return materiais.filter((m) => {
       if (filterFornecedor !== "TODOS" && m.fornecedorId !== filterFornecedor) return false;
       if (filterAlerta && m.quantidade > m.estoqueMinimo) return false;
+      if (filterCategoria !== "TODAS" && classifyMaterial(m.nome) !== filterCategoria) return false;
       return true;
     });
-  }, [materiais, filterFornecedor, filterAlerta]);
-
-  // --- Material handlers -----------------------------------------------------
+  }, [materiais, filterFornecedor, filterAlerta, filterCategoria]);
 
   function openNewMaterial() {
     setEditingMaterialId(null);
@@ -153,8 +178,6 @@ export default function EstoquePage() {
     if (deleteMaterialId) { deleteMaterial(deleteMaterialId); setDeleteMaterialId(null); }
   }
 
-  // --- Movement handlers -----------------------------------------------------
-
   function submitMovimentacao() {
     if (!movMaterialId || !movQuantidade) return;
     const mat = materiais.find((m) => m.id === movMaterialId);
@@ -170,7 +193,6 @@ export default function EstoquePage() {
       motivo: movMotivo,
       data: new Date().toISOString().split("T")[0],
     });
-    // Update material quantity
     if (mat) {
       const novaQtd = movTipo === "ENTRADA" ? mat.quantidade + Number(movQuantidade) : Math.max(0, mat.quantidade - Number(movQuantidade));
       updateMaterial(mat.id, { quantidade: novaQtd });
@@ -178,8 +200,6 @@ export default function EstoquePage() {
     setMovDialogOpen(false);
     setMovMaterialId(""); setMovQuantidade(""); setMovMotivo(""); setMovObraId("");
   }
-
-  // --- Fornecedor handlers ---------------------------------------------------
 
   function openNewForn() {
     setEditingFornId(null);
@@ -205,39 +225,6 @@ export default function EstoquePage() {
   function confirmDeleteForn() {
     if (deleteFornId) { deleteFornecedor(deleteFornId); setDeleteFornId(null); }
   }
-
-  // --- Columns ---------------------------------------------------------------
-
-  const materialColumns = [
-    { key: "codigo", label: "Codigo", sortable: true, render: (m: MaterialEstoque) => <span className="font-mono text-sm">{m.codigo}</span> },
-    { key: "nome", label: "Material", sortable: true },
-    { key: "unidade", label: "Unidade" },
-    {
-      key: "quantidade", label: "Qtd. Atual",
-      render: (m: MaterialEstoque) => (
-        <div className="flex items-center gap-2">
-          <span className={`font-medium ${m.quantidade <= m.estoqueMinimo ? "text-red-600" : ""}`}>{m.quantidade}</span>
-          {m.quantidade <= m.estoqueMinimo && <AlertTriangle className="h-4 w-4 text-red-500" />}
-        </div>
-      ),
-    },
-    { key: "estoqueMinimo", label: "Min.", render: (m: MaterialEstoque) => <span className="text-muted-foreground">{m.estoqueMinimo}</span> },
-    { key: "valorUnitario", label: "Valor Unit.", render: (m: MaterialEstoque) => fmt(m.valorUnitario) },
-    { key: "fornecedor", label: "Fornecedor" },
-    {
-      key: "acoes", label: "Acoes",
-      render: (m: MaterialEstoque) => (
-        <div className="flex items-center gap-1">
-          <button onClick={() => openEditMaterial(m)} className="rounded p-1 hover:bg-muted" title="Editar">
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <button onClick={() => setDeleteMaterialId(m.id)} className="rounded p-1 hover:bg-muted" title="Excluir">
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </button>
-        </div>
-      ),
-    },
-  ];
 
   const movimentacaoColumns = [
     { key: "data", label: "Data", sortable: true, render: (m: MovimentacaoEstoque) => fmtDate(m.data) },
@@ -280,8 +267,6 @@ export default function EstoquePage() {
     },
   ];
 
-  // --- Render ----------------------------------------------------------------
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -307,7 +292,6 @@ export default function EstoquePage() {
         }
       />
 
-      {/* KPI Cards */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Materiais" value={kpis.totalMateriais} icon={Package} />
         <StatCard title="Em Alerta" value={kpis.emAlerta} icon={AlertTriangle} />
@@ -322,7 +306,6 @@ export default function EstoquePage() {
           <TabsTrigger value="fornecedores"><Truck className="mr-1.5 h-4 w-4" />Fornecedores</TabsTrigger>
         </TabsList>
 
-        {/* Materiais Tab */}
         <TabsContent value="materiais">
           <div className="mb-4 flex flex-wrap gap-3">
             <Select value={filterFornecedor} onValueChange={setFilterFornecedor}>
@@ -334,6 +317,15 @@ export default function EstoquePage() {
                 {fornecedores.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={filterCategoria} onValueChange={setFilterCategoria}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODAS">Todas Categorias</SelectItem>
+                {CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Button
               variant={filterAlerta ? "default" : "outline"}
               size="sm"
@@ -342,16 +334,80 @@ export default function EstoquePage() {
               <AlertTriangle className="mr-1 h-4 w-4" />
               {filterAlerta ? "Mostrando alertas" : "Filtrar alertas"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { setFilterFornecedor("TODOS"); setFilterAlerta(false); }}>
+            <Button variant="outline" size="sm" onClick={() => { setFilterFornecedor("TODOS"); setFilterAlerta(false); setFilterCategoria("TODAS"); }}>
               Limpar filtros
             </Button>
           </div>
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <DataTable data={materiaisFiltrados} columns={materialColumns} searchPlaceholder="Buscar material por nome ou codigo..." pageSize={10} />
+
+          {kpis.emAlerta > 0 && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:bg-red-950/20 dark:border-red-800 dark:text-red-400">
+              <AlertTriangle className="h-4 w-4" />
+              <span>{kpis.emAlerta} material(is) abaixo do estoque minimo</span>
+            </div>
+          )}
+
+          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead className="border-b bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Codigo</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Material</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Categoria</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Unidade</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Qtd. Atual</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Min.</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Valor Unit.</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Rotatividade</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Fornecedor</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Acoes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {materiaisFiltrados.map((m) => {
+                  const abaixoMinimo = m.quantidade <= m.estoqueMinimo;
+                  const rotacao = computeRotacao(m.id, movimentacoes);
+                  return (
+                    <tr key={m.id} className={abaixoMinimo ? "bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30" : "hover:bg-muted/30"}>
+                      <td className="px-4 py-3 font-mono text-sm">{m.codigo}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{m.nome}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{classifyMaterial(m.nome)}</td>
+                      <td className="px-4 py-3 text-sm">{m.unidade}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${abaixoMinimo ? "text-red-600 dark:text-red-400" : ""}`}>{m.quantidade}</span>
+                          {abaixoMinimo && <AlertTriangle className="h-4 w-4 text-red-500" />}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{m.estoqueMinimo}</td>
+                      <td className="px-4 py-3 text-sm">{fmt(m.valorUnitario)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${rotacaoBadge[rotacao]}`}>
+                          <RotateCcw className="h-3 w-3" />
+                          {rotacao}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{m.fornecedor}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openEditMaterial(m)} className="rounded p-1 hover:bg-muted" title="Editar">
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                          <button onClick={() => setDeleteMaterialId(m.id)} className="rounded p-1 hover:bg-muted" title="Excluir">
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {materiaisFiltrados.length === 0 && (
+                  <tr><td colSpan={10} className="px-4 py-8 text-center text-sm text-muted-foreground">Nenhum material encontrado.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </TabsContent>
 
-        {/* Movimentacoes Tab */}
         <TabsContent value="movimentacoes">
           <div className="mb-4 flex justify-end">
             <Button size="sm" onClick={() => setMovDialogOpen(true)}>
@@ -363,7 +419,6 @@ export default function EstoquePage() {
           </div>
         </TabsContent>
 
-        {/* Fornecedores Tab */}
         <TabsContent value="fornecedores">
           <div className="mb-4 flex justify-end">
             <Button size="sm" onClick={openNewForn}>
@@ -376,7 +431,6 @@ export default function EstoquePage() {
         </TabsContent>
       </Tabs>
 
-      {/* -- Material Dialog --------------------------------------------- */}
       <Dialog open={materialDialogOpen} onOpenChange={setMaterialDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -444,7 +498,6 @@ export default function EstoquePage() {
         </DialogContent>
       </Dialog>
 
-      {/* -- Movimentacao Dialog ------------------------------------------ */}
       <Dialog open={movDialogOpen} onOpenChange={setMovDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -499,7 +552,6 @@ export default function EstoquePage() {
         </DialogContent>
       </Dialog>
 
-      {/* -- Fornecedor Dialog ------------------------------------------- */}
       <Dialog open={fornDialogOpen} onOpenChange={setFornDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -544,7 +596,6 @@ export default function EstoquePage() {
         </DialogContent>
       </Dialog>
 
-      {/* -- Delete Material Dialog -------------------------------------- */}
       <Dialog open={!!deleteMaterialId} onOpenChange={(o) => { if (!o) setDeleteMaterialId(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -558,7 +609,6 @@ export default function EstoquePage() {
         </DialogContent>
       </Dialog>
 
-      {/* -- Delete Fornecedor Dialog ------------------------------------ */}
       <Dialog open={!!deleteFornId} onOpenChange={(o) => { if (!o) setDeleteFornId(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>

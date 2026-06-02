@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Users, Plus, Pencil, Trash2, Eye, UserCheck, UserX, DollarSign,
+  CheckCircle, XCircle, Sun, Clock,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,7 +24,7 @@ import {
   Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from "@/components/ui/select";
 
-import { useColaboradores } from "@/hooks/use-storage-data";
+import { useColaboradores, usePresencas } from "@/hooks/use-storage-data";
 import { Colaborador } from "@/lib/mock-data";
 
 const colaboradorSchema = z.object({
@@ -53,15 +54,28 @@ const STATUS_LABELS: Record<string, string> = {
   ATIVO: "Ativo", INATIVO: "Inativo", FERIAS: "Ferias",
 };
 
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  ATIVO: <CheckCircle className="h-3.5 w-3.5" />,
+  INATIVO: <XCircle className="h-3.5 w-3.5" />,
+  FERIAS: <Sun className="h-3.5 w-3.5" />,
+};
+
+const DOT_COLORS: Record<string, string> = {
+  ATIVO: "bg-green-500",
+  INATIVO: "bg-red-500",
+  FERIAS: "bg-amber-500",
+};
+
 export default function ColaboradoresPage() {
   const router = useRouter();
   const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador } = useColaboradores();
+  const { presencas, loading: loadingPresencas } = usePresencas();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("TODOS");
-  const [filterCargo, setFilterCargo] = useState("TODOS");
+  const [filterSetor, setFilterSetor] = useState("TODOS");
 
   const form = useForm<ColaboradorForm>({
     resolver: zodResolver(colaboradorSchema),
@@ -71,6 +85,14 @@ export default function ColaboradoresPage() {
     },
   });
 
+  const horasMes = useMemo(() => {
+    const now = new Date();
+    const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return presencas
+      .filter((p) => p.data.startsWith(mesAtual))
+      .reduce((sum, p) => sum + p.horas, 0);
+  }, [presencas]);
+
   const kpis = useMemo(() => ({
     total: colaboradores.length,
     ativos: colaboradores.filter((c) => c.status === "ATIVO").length,
@@ -78,17 +100,17 @@ export default function ColaboradoresPage() {
     folha: colaboradores.filter((c) => c.status === "ATIVO").reduce((s, c) => s + c.salario, 0),
   }), [colaboradores]);
 
-  const cargos = useMemo(() => {
+  const setores = useMemo(() => {
     return Array.from(new Set(colaboradores.map((c) => c.cargo))).sort();
   }, [colaboradores]);
 
   const filtrados = useMemo(() => {
     return colaboradores.filter((c) => {
       if (filterStatus !== "TODOS" && c.status !== filterStatus) return false;
-      if (filterCargo !== "TODOS" && c.cargo !== filterCargo) return false;
+      if (filterSetor !== "TODOS" && c.cargo !== filterSetor) return false;
       return true;
     });
-  }, [colaboradores, filterStatus, filterCargo]);
+  }, [colaboradores, filterStatus, filterSetor]);
 
   function openNew() {
     setEditingId(null);
@@ -116,13 +138,22 @@ export default function ColaboradoresPage() {
   }
 
   const columns = [
-    { key: "nome", label: "Nome", sortable: true },
-    { key: "cargo", label: "Funcao", sortable: true },
+    {
+      key: "nome", label: "Nome", sortable: true,
+      render: (c: Colaborador) => (
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${DOT_COLORS[c.status]}`} />
+          <span className="font-medium">{c.nome}</span>
+        </div>
+      ),
+    },
+    { key: "cargo", label: "Cargo / Setor", sortable: true },
     { key: "telefone", label: "Telefone" },
     {
       key: "status", label: "Status",
       render: (c: Colaborador) => (
-        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[c.status]}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[c.status]}`}>
+          {STATUS_ICONS[c.status]}
           {STATUS_LABELS[c.status]}
         </span>
       ),
@@ -149,12 +180,12 @@ export default function ColaboradoresPage() {
     },
   ];
 
-  if (loading) {
+  if (loading || loadingPresencas) {
     return (
       <div className="space-y-4">
         <div className="h-8 w-48 animate-pulse rounded bg-muted" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1,2,3,4].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {[1,2,3,4,5].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />)}
         </div>
         <div className="h-96 animate-pulse rounded-xl bg-muted" />
       </div>
@@ -174,11 +205,12 @@ export default function ColaboradoresPage() {
         }
       />
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard title="Total" value={kpis.total} icon={Users} />
         <StatCard title="Ativos" value={kpis.ativos} icon={UserCheck} />
-        <StatCard title="Em Ferias" value={kpis.ferias} icon={UserX} />
+        <StatCard title="Em Ferias" value={kpis.ferias} icon={Sun} />
         <StatCard title="Folha Mensal" value={fmt(kpis.folha)} icon={DollarSign} />
+        <StatCard title="Horas no Mes" value={`${horasMes.toFixed(1)}h`} icon={Clock} />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -194,17 +226,17 @@ export default function ColaboradoresPage() {
           </SelectContent>
         </Select>
 
-        <Select value={filterCargo} onValueChange={setFilterCargo}>
+        <Select value={filterSetor} onValueChange={setFilterSetor}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Funcao" />
+            <SelectValue placeholder="Setor" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="TODOS">Todas</SelectItem>
-            {cargos.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            <SelectItem value="TODOS">Todos os Setores</SelectItem>
+            {setores.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="sm" onClick={() => { setFilterStatus("TODOS"); setFilterCargo("TODOS"); }}>
+        <Button variant="outline" size="sm" onClick={() => { setFilterStatus("TODOS"); setFilterSetor("TODOS"); }}>
           Limpar filtros
         </Button>
       </div>
@@ -213,7 +245,6 @@ export default function ColaboradoresPage() {
         <DataTable data={filtrados} columns={columns} searchPlaceholder="Buscar colaboradores..." pageSize={10} />
       </div>
 
-      {/* New/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -235,7 +266,7 @@ export default function ColaboradoresPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label>Cargo *</Label>
+                <Label>Cargo / Setor *</Label>
                 <Input {...form.register("cargo")} placeholder="Ex: Pedreiro" />
                 {form.formState.errors.cargo && <p className="text-xs text-red-500">{form.formState.errors.cargo.message}</p>}
               </div>
@@ -280,7 +311,6 @@ export default function ColaboradoresPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
