@@ -19,6 +19,8 @@ import {
   MessageSquare,
   Moon,
   Sun,
+  UserPlus,
+  Clock,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -57,6 +59,20 @@ interface IntegracoesData {
   smtpPorta: string;
   smtpEmail: string;
   smtpSenha: string;
+}
+
+interface AccessRequestItem {
+  id: string;
+  nome: string;
+  email: string;
+  telefone: string;
+  empresa: string;
+  cargo: string;
+  mensagem?: string;
+  status: "pendente" | "aprovado" | "rejeitado";
+  dataSolicitacao: string;
+  dataResposta?: string;
+  motivoRejeicao?: string;
 }
 
 // ─── Default data ─────────────────────────────────────────────────────────────
@@ -967,6 +983,213 @@ function TabAparencia() {
   );
 }
 
+// ─── Tab: Solicitacoes ────────────────────────────────────────────────────────
+
+function TabSolicitacoes() {
+  const [requests, setRequests] = useState<AccessRequestItem[]>([]);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  useEffect(() => {
+    const raw = localStorage.getItem("smart-obra-access-requests");
+    if (raw) {
+      try {
+        setRequests(JSON.parse(raw));
+      } catch {
+        setRequests([]);
+      }
+    }
+  }, []);
+
+  function persist(updated: AccessRequestItem[]) {
+    setRequests(updated);
+    localStorage.setItem("smart-obra-access-requests", JSON.stringify(updated));
+  }
+
+  function handleApprove(id: string) {
+    const updated = requests.map((r) =>
+      r.id === id
+        ? { ...r, status: "aprovado" as const, dataResposta: new Date().toISOString() }
+        : r
+    );
+    persist(updated);
+    showToast("Solicitação aprovada com sucesso!");
+  }
+
+  function handleReject(id: string) {
+    if (!rejectReason.trim()) {
+      showToast("Informe o motivo da rejeição.", "error");
+      return;
+    }
+    const updated = requests.map((r) =>
+      r.id === id
+        ? {
+            ...r,
+            status: "rejeitado" as const,
+            dataResposta: new Date().toISOString(),
+            motivoRejeicao: rejectReason.trim(),
+          }
+        : r
+    );
+    persist(updated);
+    setRejectingId(null);
+    setRejectReason("");
+    showToast("Solicitação rejeitada.");
+  }
+
+  function cancelReject() {
+    setRejectingId(null);
+    setRejectReason("");
+  }
+
+  const pending = requests.filter((r) => r.status === "pendente");
+  const processed = requests.filter((r) => r.status !== "pendente");
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "aprovado":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800";
+      case "rejeitado":
+        return "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800";
+      default:
+        return "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800";
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Pending Requests */}
+      {pending.length > 0 && (
+        <SectionCard>
+          <div className="flex items-center justify-between mb-4">
+            <SectionTitle icon={Clock} title={`Pendentes (${pending.length})`} />
+          </div>
+          <div className="divide-y">
+            {pending.map((req) => (
+              <div key={req.id} className="py-4 first:pt-0 last:pb-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm">{req.nome}</span>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusBadge(req.status)}`}>
+                        Pendente
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5">{req.email}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>Empresa: <strong>{req.empresa}</strong></span>
+                      <span>Cargo: <strong>{req.cargo}</strong></span>
+                      <span>Tel: {req.telefone}</span>
+                    </div>
+                    {req.mensagem && (
+                      <p className="mt-2 text-xs text-muted-foreground italic bg-muted/50 rounded-lg px-3 py-2">
+                        &ldquo;{req.mensagem}&rdquo;
+                      </p>
+                    )}
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      Solicitado em:{" "}
+                      {new Date(req.dataSolicitacao).toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {rejectingId === req.id ? (
+                      <div className="flex flex-col gap-2">
+                        <Input
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          placeholder="Motivo da rejeição..."
+                          className="text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="destructive" onClick={() => handleReject(req.id)} className="gap-1">
+                            Confirmar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelReject}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(req.id)}
+                          className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setRejectingId(req.id)}
+                          className="gap-1.5"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Rejeitar
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {pending.length === 0 && (
+        <SectionCard className="text-center py-8">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500 mb-3" />
+          <p className="font-medium">Nenhuma solicitação pendente</p>
+          <p className="text-sm text-muted-foreground mt-1">Todas as solicitações foram processadas.</p>
+        </SectionCard>
+      )}
+
+      {/* Processed Requests */}
+      {processed.length > 0 && (
+        <SectionCard>
+          <SectionTitle icon={UserPlus} title="Histórico de Solicitações" />
+          <div className="divide-y">
+            {processed.map((req) => (
+              <div key={req.id} className="flex items-center justify-between py-3 gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{req.nome}</span>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusBadge(req.status)}`}>
+                      {req.status === "aprovado" ? "Aprovado" : "Rejeitado"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {req.email} - {req.empresa}
+                  </p>
+                  {req.motivoRejeicao && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      Motivo: {req.motivoRejeicao}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[11px] text-muted-foreground">
+                    {req.dataResposta &&
+                      new Date(req.dataResposta).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConfiguracoesPage() {
@@ -1003,6 +1226,10 @@ export default function ConfiguracoesPage() {
             <Palette className="h-3.5 w-3.5" />
             Aparência
           </TabsTrigger>
+          <TabsTrigger value="solicitacoes" className="gap-1.5 text-xs sm:text-sm">
+            <UserPlus className="h-3.5 w-3.5" />
+            Solicitações
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="empresa">
@@ -1027,6 +1254,10 @@ export default function ConfiguracoesPage() {
 
         <TabsContent value="aparencia">
           <TabAparencia />
+        </TabsContent>
+
+        <TabsContent value="solicitacoes">
+          <TabSolicitacoes />
         </TabsContent>
       </Tabs>
     </div>

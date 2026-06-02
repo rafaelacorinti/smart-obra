@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
@@ -94,7 +94,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   {...register("password")}
                   className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  placeholder="••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢"
                 />
                 <button
                   type="button"
@@ -127,7 +127,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <Link
-              href="/register"
+              href="/solicitar-acesso"
               className="text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
             >
               Solicitar acesso
@@ -144,4 +144,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -41,10 +41,41 @@ const adminItems = [
   { href: "/configuracoes", label: "Configuracoes", icon: Settings },
 ];
 
+function usePendingRequestsCount() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    function updateCount() {
+      try {
+        const raw = localStorage.getItem("smart-obra-access-requests");
+        if (raw) {
+          const requests = JSON.parse(raw) as Array<{ status: string }>;
+          setCount(requests.filter((r) => r.status === "pendente").length);
+        } else {
+          setCount(0);
+        }
+      } catch {
+        setCount(0);
+      }
+    }
+
+    updateCount();
+    const interval = setInterval(updateCount, 3000);
+    window.addEventListener("storage", updateCount);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("storage", updateCount);
+    };
+  }, []);
+
+  return count;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { isOpen, isMobileOpen, toggle, closeMobile, setOpen } = useSidebarStore();
   const { user } = useCurrentUser();
+  const pendingCount = usePendingRequestsCount();
 
   useEffect(() => {
     const handleResize = () => {
@@ -84,13 +115,14 @@ export function Sidebar() {
       <nav className="mt-4 flex-1 space-y-1 px-2 overflow-y-auto">
         {allItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const showBadge = item.href === "/configuracoes" && pendingCount > 0;
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={closeMobile}
               className={cn(
-                "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "group relative flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
                   ? "bg-blue-600/80 text-white shadow-lg shadow-blue-600/20"
                   : "text-gray-300 hover:bg-white/10 hover:text-white"
@@ -101,6 +133,14 @@ export function Sidebar() {
               {!isOpen && (
                 <span className="invisible absolute left-full ml-2 rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-all group-hover:visible group-hover:opacity-100">
                   {item.label}
+                </span>
+              )}
+              {showBadge && (
+                <span className={cn(
+                  "flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white",
+                  isOpen ? "ml-auto h-5 min-w-5 px-1" : "absolute -right-1 -top-1 h-4 min-w-4 px-0.5"
+                )}>
+                  {pendingCount}
                 </span>
               )}
             </Link>
@@ -146,5 +186,3 @@ export function Sidebar() {
     </>
   );
 }
-
-
