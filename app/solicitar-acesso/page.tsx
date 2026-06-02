@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 const solicitacaoSchema = z.object({
   nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   email: z.string().email("Email invalido"),
+  senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   telefone: z.string().min(10, "Telefone invalido"),
   empresa: z.string().min(2, "Empresa obrigatoria"),
   cargo: z.string().min(2, "Cargo obrigatorio"),
@@ -23,6 +24,7 @@ interface AccessRequest {
   id: string;
   nome: string;
   email: string;
+  senha: string;
   telefone: string;
   empresa: string;
   cargo: string;
@@ -54,6 +56,7 @@ export default function SolicitarAcessoPage() {
       id: `req-${Date.now()}`,
       nome: data.nome,
       email: data.email,
+      senha: data.senha,
       telefone: data.telefone,
       empresa: data.empresa,
       cargo: data.cargo,
@@ -153,6 +156,21 @@ export default function SolicitarAcessoPage() {
               />
               {errors.email && (
                 <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Senha *
+              </label>
+              <input
+                type="password"
+                {...register("senha")}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                placeholder="Minimo 6 caracteres"
+              />
+              {errors.senha && (
+                <p className="mt-1 text-xs text-red-500">{errors.senha.message}</p>
               )}
             </div>
 
