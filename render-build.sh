@@ -1,5 +1,7 @@
 #!/bin/bash
 npm install
 npx next build
+mkdir -p .next/standalone/.next
 cp -r .next/static .next/standalone/.next/static
-cp -r public .next/standalone/public
+mkdir -p .next/standalone/public
+cp -r public/* .next/standalone/public/
