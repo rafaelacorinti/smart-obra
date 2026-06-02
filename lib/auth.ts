@@ -1,5 +1,6 @@
 ﻿import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { getRegisteredUsers } from "@/lib/mock-store";
 
 // Mock users for development (no database required)
 const MOCK_USERS = [
@@ -54,26 +55,46 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Credenciais invalidas");
         }
 
-        const user = MOCK_USERS.find(
+        // Check mock users first
+        const mockUser = MOCK_USERS.find(
           (u) => u.email === credentials.email && u.active
         );
 
-        if (!user) {
-          throw new Error("Usuario nao encontrado ou inativo");
+        if (mockUser) {
+          if (mockUser.password !== credentials.password) {
+            throw new Error("Senha incorreta");
+          }
+          return {
+            id: mockUser.id,
+            name: mockUser.name,
+            email: mockUser.email,
+            role: mockUser.role,
+            companyId: mockUser.companyId,
+            companyName: mockUser.companyName,
+          };
         }
 
-        if (user.password !== credentials.password) {
-          throw new Error("Senha incorreta");
+        // Check registered users (approved access requests)
+        const registeredUsers = getRegisteredUsers();
+        const regUser = registeredUsers.find(
+          (u) => u.email === credentials.email && u.active
+        );
+
+        if (regUser) {
+          if (regUser.password !== credentials.password) {
+            throw new Error("Senha incorreta");
+          }
+          return {
+            id: regUser.id,
+            name: regUser.name,
+            email: regUser.email,
+            role: regUser.role,
+            companyId: "company-1",
+            companyName: regUser.companyName,
+          };
         }
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          companyId: user.companyId,
-          companyName: user.companyName,
-        };
+        throw new Error("Usuario nao encontrado ou inativo");
       },
     }),
   ],

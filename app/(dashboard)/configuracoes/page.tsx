@@ -65,6 +65,7 @@ interface AccessRequestItem {
   id: string;
   nome: string;
   email: string;
+  senha?: string;
   telefone: string;
   empresa: string;
   cargo: string;
@@ -1006,14 +1007,33 @@ function TabSolicitacoes() {
     localStorage.setItem("smart-obra-access-requests", JSON.stringify(updated));
   }
 
-  function handleApprove(id: string) {
+  async function handleApprove(id: string) {
+    const req = requests.find((r) => r.id === id);
+    if (!req) return;
+
+    // Register user on server so they can login
+    try {
+      await fetch("/api/users/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: req.nome,
+          email: req.email,
+          password: req.senha || "123456",
+          companyName: req.empresa,
+        }),
+      });
+    } catch (e) {
+      // Continue even if API fails
+    }
+
     const updated = requests.map((r) =>
       r.id === id
         ? { ...r, status: "aprovado" as const, dataResposta: new Date().toISOString() }
         : r
     );
     persist(updated);
-    showToast("Solicitação aprovada com sucesso!");
+    showToast("Solicitação aprovada com sucesso! Usuário já pode fazer login.");
   }
 
   function handleReject(id: string) {

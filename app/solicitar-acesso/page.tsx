@@ -65,9 +65,23 @@ export default function SolicitarAcessoPage() {
       dataSolicitacao: new Date().toISOString(),
     };
 
+    // Save to localStorage for admin panel
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as AccessRequest[];
     existing.push(newRequest);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+
+    // Also notify server API
+    fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: data.nome,
+        email: data.email,
+        phone: data.telefone,
+        companyName: data.empresa,
+        cnpj: "N/A",
+      }),
+    }).catch(() => {});
 
     setTimeout(() => {
       setLoading(false);

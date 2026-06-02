@@ -24,6 +24,37 @@ let accessRequests: AccessRequest[] = [
   },
 ];
 
+// Registered users (approved via access request system)
+interface RegisteredUser {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  companyName: string;
+  active: boolean;
+}
+
+let registeredUsers: RegisteredUser[] = [];
+
+export function getRegisteredUsers(): RegisteredUser[] {
+  return registeredUsers;
+}
+
+export function registerUser(data: { name: string; email: string; password: string; companyName: string }): RegisteredUser {
+  const user: RegisteredUser = {
+    id: `user-${Date.now()}`,
+    name: data.name,
+    email: data.email,
+    password: data.password,
+    role: "GESTOR",
+    companyName: data.companyName,
+    active: true,
+  };
+  registeredUsers.push(user);
+  return user;
+}
+
 export function getAccessRequests(): AccessRequest[] {
   return accessRequests;
 }
