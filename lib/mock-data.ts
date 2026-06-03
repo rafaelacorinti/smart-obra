@@ -270,6 +270,14 @@ export interface DocumentoVeiculo {
 
 // === ORCAMENTOS ===
 
+export interface ComposicaoDetalhe {
+  tipo: "material" | "maoDeObra" | "equipamento";
+  descricao: string;
+  unidade: string;
+  coeficiente: number;
+  precoUnitario: number;
+}
+
 export interface ItemOrcamento {
   id: string;
   codigo: string;
@@ -278,12 +286,26 @@ export interface ItemOrcamento {
   unidade: string;
   quantidade: number;
   precoUnitario: number;
+  composicao?: ComposicaoDetalhe[];
 }
 
 export interface CapituloOrcamento {
   id: string;
   nome: string;
   itens: ItemOrcamento[];
+}
+
+export interface BDIBreakdown {
+  administracaoCentral: number;
+  seguro: number;
+  garantia: number;
+  risco: number;
+  despesasFinanceiras: number;
+  lucro: number;
+  pis: number;
+  cofins: number;
+  iss: number;
+  cprb: number;
 }
 
 export interface Orcamento {
@@ -294,12 +316,20 @@ export interface Orcamento {
   clienteNome: string;
   uf: string;
   bdi: number;
+  bdiBreakdown?: BDIBreakdown;
   areaM2: number;
   basePadrao: "SINAPI" | "SICRO" | "TCPO";
   status: "RASCUNHO" | "APROVADO";
   capitulos: CapituloOrcamento[];
+  encargosHorista?: number;
+  encargosMensalista?: number;
+  tipoEncargo?: "horista" | "mensalista";
+  fatorRegional?: number;
+  contingencia?: number;
   subtotal: number;
   valorBdi: number;
+  valorEncargos?: number;
+  valorContingencia?: number;
   total: number;
   criadoEm: string;
 }
@@ -729,3 +759,4 @@ export const documentosClienteIniciais: DocumentoCliente[] = [
   { id: "doccli-7", clienteId: "cli-5", tipo: "PROPOSTA", nome: "Proposta reforma residencial", url: "#", criadoEm: "2024-03-15" },
   { id: "doccli-8", clienteId: "cli-7", tipo: "CONTRATO", nome: "Contrato parceria obras", url: "#", criadoEm: "2024-02-01" },
 ];
+

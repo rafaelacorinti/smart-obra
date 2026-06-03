@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calculator,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -35,6 +36,7 @@ const menuItems = [
   { href: "/veiculos", label: "Veiculos", icon: Truck },
   { href: "/clientes", label: "Clientes", icon: UserCircle },
   { href: "/relatorios", label: "Relatorios", icon: BarChart3 },
+  { href: "/documentos", label: "Documentos", icon: FolderOpen },
 ];
 
 const adminItems = [
@@ -186,3 +188,5 @@ export function Sidebar() {
     </>
   );
 }
+
+
