@@ -31,27 +31,27 @@ interface QuickAction {
   icon: React.ReactNode;
 }
 
-// ─── Quick actions ─────────────────────────────────────────────────────────────
+// ─── Quick actions ────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
     label: "Resumo da empresa",
-    prompt: "Qual é o resumo geral da empresa?",
+    prompt: "Qual e o resumo geral da empresa?",
     icon: <Building2 className="w-3 h-3" />,
   },
   {
     label: "Alertas",
-    prompt: "Quais são os alertas importantes?",
+    prompt: "Quais sao os alertas importantes?",
     icon: <AlertTriangle className="w-3 h-3" />,
   },
   {
-    label: "Previsão de custos",
-    prompt: "Qual é a previsão de custos?",
+    label: "Previsao de custos",
+    prompt: "Qual e a previsao de custos?",
     icon: <TrendingUp className="w-3 h-3" />,
   },
   {
-    label: "Sugestão de orçamento",
-    prompt: "Me dê uma sugestão de orçamento.",
+    label: "Sugestao de orcamento",
+    prompt: "Me de uma sugestao de orcamento.",
     icon: <Lightbulb className="w-3 h-3" />,
   },
 ];
@@ -136,7 +136,7 @@ export default function AIAssistant() {
       id: "welcome",
       role: "assistant",
       content:
-        "Olá! Sou o assistente inteligente do Smart Obra. 👷\n\nPosso ajudar com resumos, status de obras, previsão de custos, alertas e muito mais. Como posso ajudar?",
+        "Ola! Sou o assistente inteligente do Smart Obra.\n\nPosso ajudar com resumos, status de obras, previsao de custos, alertas e muito mais. Como posso ajudar?",
       timestamp: new Date(),
     },
   ]);
@@ -147,7 +147,6 @@ export default function AIAssistant() {
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // ── Data hooks ────────────────────────────────────────────────────────────
   const { obras } = useObras();
   const { lancamentos } = useLancamentos();
   const { ordens: ordensServico } = useOrdensServico();
@@ -156,21 +155,18 @@ export default function AIAssistant() {
   const { veiculos } = useVeiculos();
   const { manutencoes: manutencoesVeiculo } = useManutencoesVeiculo();
 
-  // ── Scroll to bottom on new messages ─────────────────────────────────────
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
 
-  // ── Focus input when panel opens ──────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
 
-  // ── Close on Escape ───────────────────────────────────────────────────────
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) setIsOpen(false);
@@ -179,11 +175,9 @@ export default function AIAssistant() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen]);
 
-  // ── Response generator ────────────────────────────────────────────────────
   function generateResponse(query: string): string {
     const q = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    // ── Resumo / empresa ─────────────────────────────────────────────────
     if (q.includes("resumo") || q.includes("empresa")) {
       const obrasAtivas = obras.filter((o) => o.status === "EM_ANDAMENTO").length;
       const obrasTotal = obras.length;
@@ -203,19 +197,18 @@ export default function AIAssistant() {
       ).length;
 
       return (
-        `📊 Resumo Geral da Empresa\n\n` +
-        `🏗️ Obras: ${obrasAtivas} em andamento de ${obrasTotal} total\n` +
-        `👷 Colaboradores: ${totalColaboradores} cadastrados\n` +
-        `🚗 Veículos: ${totalVeiculos} na frota\n` +
-        `🔧 Ordens de serviço abertas: ${osAbertas}\n\n` +
-        `💰 Financeiro:\n` +
-        `   • Receitas: R$ ${receitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
-        `   • Despesas: R$ ${despesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
-        `   • Saldo: ${saldo >= 0 ? "+" : ""}R$ ${saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+        `Resumo Geral da Empresa\n\n` +
+        `Obras: ${obrasAtivas} em andamento de ${obrasTotal} total\n` +
+        `Colaboradores: ${totalColaboradores} cadastrados\n` +
+        `Veiculos: ${totalVeiculos} na frota\n` +
+        `Ordens de servico abertas: ${osAbertas}\n\n` +
+        `Financeiro:\n` +
+        `   Receitas: R$ ${receitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
+        `   Despesas: R$ ${despesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
+        `   Saldo: ${saldo >= 0 ? "+" : ""}R$ ${saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
       );
     }
 
-    // ── Obra específica ──────────────────────────────────────────────────
     if (q.includes("obra")) {
       const words = q.split(" ").filter((w) => w.length > 3 && w !== "obra");
       const found = obras.find((o) =>
@@ -230,26 +223,25 @@ export default function AIAssistant() {
         const orcamento = Number(found.orcamento || 0);
         const progresso = found.progresso || 0;
         return (
-          `🏗️ Obra: ${nome}\n\n` +
-          `📌 Status: ${status}\n` +
-          `📈 Progresso: ${progresso}%\n` +
-          `💰 Orçamento: R$ ${orcamento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
-          `📍 Endereço: ${found.endereco || "Não informado"}`
+          `Obra: ${nome}\n\n` +
+          `Status: ${status}\n` +
+          `Progresso: ${progresso}%\n` +
+          `Orcamento: R$ ${orcamento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
+          `Endereco: ${found.endereco || "Nao informado"}`
         );
       }
 
       const lista = obras
         .slice(0, 5)
-        .map((o) => `• ${o.nome || "Sem nome"} — ${o.status || "indefinido"}`)
+        .map((o) => `- ${o.nome || "Sem nome"} - ${o.status || "indefinido"}`)
         .join("\n");
 
       return obras.length === 0
         ? "Nenhuma obra cadastrada no momento."
-        : `🏗️ Obras cadastradas:\n\n${lista}${obras.length > 5 ? `\n\n...e mais ${obras.length - 5} outras.` : ""}`;
+        : `Obras cadastradas:\n\n${lista}${obras.length > 5 ? `\n\n...e mais ${obras.length - 5} outras.` : ""}`;
     }
 
-    // ── Previsão / custo ─────────────────────────────────────────────────
-    if (q.includes("previsao") || q.includes("previsão") || q.includes("custo")) {
+    if (q.includes("previsao") || q.includes("custo")) {
       const hoje = new Date();
       const mesAtual = hoje.getMonth();
       const anoAtual = hoje.getFullYear();
@@ -273,21 +265,18 @@ export default function AIAssistant() {
       const projecaoDespesas = (despesasMes / diaAtual) * diasNoMes;
 
       return (
-        `📈 Previsão de Custos\n\n` +
-        `Mês atual (${hoje.toLocaleString("pt-BR", { month: "long", year: "numeric" })}):\n\n` +
-        `📉 Despesas até hoje: R$ ${despesasMes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
-        `📈 Receitas até hoje: R$ ${receitasMes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
-        `🔮 Projeção de despesas até fim do mês:\n   R$ ${projecaoDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
-        `${projecaoDespesas > receitasMes * 1.2 ? "⚠️ Atenção: as despesas projetadas superam as receitas do mês." : "✅ Despesas dentro do esperado."}`
+        `Previsao de Custos\n\nMes atual (${hoje.toLocaleString("pt-BR", { month: "long", year: "numeric" })}):\n\n` +
+        `Despesas ate hoje: R$ ${despesasMes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n` +
+        `Receitas ate hoje: R$ ${receitasMes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `Projecao de despesas ate fim do mes:\n   R$ ${projecaoDespesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `${projecaoDespesas > receitasMes * 1.2 ? "Atencao: as despesas projetadas superam as receitas do mes." : "Despesas dentro do esperado."}`
       );
     }
 
-    // ── Alertas ──────────────────────────────────────────────────────────
     if (q.includes("alerta")) {
       const alertas: string[] = [];
       const hoje = new Date();
 
-      // Contas vencidas
       const contasVencidas = lancamentos.filter((l) => {
         const venc = new Date(l.data || "");
         return (
@@ -298,48 +287,39 @@ export default function AIAssistant() {
         );
       });
       if (contasVencidas.length > 0) {
-        alertas.push(`💳 ${contasVencidas.length} conta(s) vencida(s) sem pagamento`);
+        alertas.push(`${contasVencidas.length} conta(s) vencida(s) sem pagamento`);
       }
 
-      // Manutenções pendentes
       const manutencoesPendentes = manutencoesVeiculo.filter(
         (m) => m.proximaKm !== undefined
       );
       if (manutencoesPendentes.length > 0) {
-        alertas.push(`🔧 ${manutencoesPendentes.length} manutenção(ões) de veículo pendente(s)`);
+        alertas.push(`${manutencoesPendentes.length} manutencao(oes) de veiculo pendente(s)`);
       }
 
-      // Estoque baixo (quantidade <= estoqueMinimo)
       const estoqueBaixo = materiaisEstoque.filter(
         (m) => Number(m.quantidade || 0) <= Number(m.estoqueMinimo || 0)
       );
       if (estoqueBaixo.length > 0) {
-        alertas.push(`📦 ${estoqueBaixo.length} material(is) com estoque baixo`);
+        alertas.push(`${estoqueBaixo.length} material(is) com estoque baixo`);
       }
 
-      // OS atrasadas
       const osAtrasadas = ordensServico.filter((os) => {
         const prazo = new Date(os.dataAgendada || "");
         return (os.status === "ABERTA" || os.status === "EM_ANDAMENTO") && prazo < hoje && !isNaN(prazo.getTime());
       });
       if (osAtrasadas.length > 0) {
-        alertas.push(`🔨 ${osAtrasadas.length} ordem(ns) de serviço atrasada(s)`);
+        alertas.push(`${osAtrasadas.length} ordem(ns) de servico atrasada(s)`);
       }
 
       if (alertas.length === 0) {
-        return "✅ Nenhum alerta crítico no momento. Tudo em ordem!";
+        return "Nenhum alerta critico no momento. Tudo em ordem!";
       }
 
-      return `🚨 Alertas Importantes\n\n${alertas.join("\n")}\n\nVerifique os módulos correspondentes para mais detalhes.`;
+      return `Alertas Importantes\n\n${alertas.join("\n")}\n\nVerifique os modulos correspondentes para mais detalhes.`;
     }
 
-    // ── Sugestão / orçamento ──────────────────────────────────────────────
-    if (
-      q.includes("sugestao") ||
-      q.includes("sugestão") ||
-      q.includes("orcamento") ||
-      q.includes("orçamento")
-    ) {
+    if (q.includes("sugestao") || q.includes("orcamento")) {
       const mediaObras =
         obras.length > 0
           ? obras.reduce((acc, o) => acc + (Number(o.orcamento || 0)), 0) / obras.length
@@ -361,28 +341,25 @@ export default function AIAssistant() {
           : 0;
 
       return (
-        `💡 Sugestões de Orçamento\n\n` +
-        `Com base nos dados atuais:\n\n` +
-        `• Valor médio das obras cadastradas:\n  R$ ${mediaObras.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
-        `• Valor total em estoque:\n  R$ ${totalMateriais.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
-        `• Custo médio mensal estimado:\n  R$ ${custoMedioMensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
-        `💼 Recomendação: reserve ao menos 15% do orçamento de cada obra para imprevistos e manutenções não planejadas.`
+        `Sugestoes de Orcamento\n\nCom base nos dados atuais:\n\n` +
+        `Valor medio das obras cadastradas:\n  R$ ${mediaObras.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `Valor total em estoque:\n  R$ ${totalMateriais.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `Custo medio mensal estimado:\n  R$ ${custoMedioMensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n` +
+        `Recomendacao: reserve ao menos 15% do orcamento de cada obra para imprevistos.`
       );
     }
 
-    // ── Default ───────────────────────────────────────────────────────────
     return (
       "Posso ajudar com:\n\n" +
-      "🏢 Resumo da empresa — visão geral de KPIs\n" +
-      "🏗️ Status de obras — informações detalhadas\n" +
-      "📈 Previsão de custos — análise financeira\n" +
-      "🚨 Alertas importantes — pendências críticas\n" +
-      "💡 Sugestões de orçamento — estimativas inteligentes\n\n" +
-      "É só perguntar!"
+      "Resumo da empresa - visao geral de KPIs\n" +
+      "Status de obras - informacoes detalhadas\n" +
+      "Previsao de custos - analise financeira\n" +
+      "Alertas importantes - pendencias criticas\n" +
+      "Sugestoes de orcamento - estimativas inteligentes\n\n" +
+      "E so perguntar!"
     );
   }
 
-  // ── Send message ──────────────────────────────────────────────────────────
   function handleSend(text?: string) {
     const content = (text ?? inputValue).trim();
     if (!content || isTyping) return;
@@ -419,10 +396,8 @@ export default function AIAssistant() {
     }
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <>
-      {/* ── Overlay (click to close) ────────────────────────────────────── */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40 transition-opacity duration-300"
@@ -430,7 +405,6 @@ export default function AIAssistant() {
         />
       )}
 
-      {/* ── Side Panel ──────────────────────────────────────────────────── */}
       <div
         ref={panelRef}
         className={`
@@ -441,7 +415,6 @@ export default function AIAssistant() {
         `}
         style={{ maxWidth: "100vw" }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm">
@@ -451,7 +424,7 @@ export default function AIAssistant() {
               <h2 className="text-white font-semibold text-base leading-tight">
                 Assistente IA
               </h2>
-              <p className="text-violet-200 text-xs">Smart Obra · sempre online</p>
+              <p className="text-violet-200 text-xs">Smart Obra - sempre online</p>
             </div>
           </div>
           <button
@@ -463,7 +436,6 @@ export default function AIAssistant() {
           </button>
         </div>
 
-        {/* Quick actions */}
         <div className="flex gap-2 px-4 py-3 overflow-x-auto flex-shrink-0 border-b border-slate-200 bg-white scrollbar-hide">
           {QUICK_ACTIONS.map((action) => (
             <button
@@ -485,7 +457,6 @@ export default function AIAssistant() {
           ))}
         </div>
 
-        {/* Messages */}
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto px-4 py-4 space-y-0"
@@ -497,7 +468,6 @@ export default function AIAssistant() {
           {isTyping && <TypingIndicator />}
         </div>
 
-        {/* Input */}
         <div className="flex-shrink-0 px-4 py-4 bg-white border-t border-slate-200">
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-1.5 focus-within:border-violet-400 focus-within:bg-white transition-all duration-150 shadow-sm">
             <Input
@@ -533,7 +503,6 @@ export default function AIAssistant() {
         </div>
       </div>
 
-      {/* ── Floating Button ─────────────────────────────────────────────── */}
       <button
         onClick={() => setIsOpen((v) => !v)}
         aria-label="Abrir assistente IA"
@@ -546,8 +515,6 @@ export default function AIAssistant() {
           flex items-center justify-center
           transition-all duration-200
           hover:scale-110 active:scale-95
-          ${!isOpen ? "animate-pulse-subtle" : ""}
-          ${isOpen ? "rotate-0 scale-95" : "rotate-0 scale-100"}
         `}
         style={{
           boxShadow: isOpen
@@ -560,13 +527,11 @@ export default function AIAssistant() {
         ) : (
           <Sparkles className="w-6 h-6 text-white" />
         )}
-        {/* Unread / online dot */}
         {!isOpen && (
           <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full" />
         )}
       </button>
 
-      {/* ── Pulse animation style ────────────────────────────────────────── */}
       <style jsx global>{`
         @keyframes pulse-subtle {
           0%, 100% { box-shadow: 0 8px 32px rgba(109, 40, 217, 0.35); }

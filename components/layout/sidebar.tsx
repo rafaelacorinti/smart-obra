@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
+import NextImage from "next/image";
 import {
   LayoutDashboard,
   Building2,
@@ -19,6 +19,12 @@ import {
   ChevronRight,
   Calculator,
   FolderOpen,
+  Calendar,
+  BookOpen,
+  Layers,
+  ImageIcon,
+  ShoppingCart,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -30,13 +36,20 @@ const menuItems = [
   { href: "/obras", label: "Obras", icon: Building2 },
   { href: "/orcamentos", label: "Orcamentos", icon: Calculator },
   { href: "/financeiro", label: "Financeiro", icon: DollarSign },
+  { href: "/orcado-realizado", label: "Orcado x Realizado", icon: BarChart3 },
+  { href: "/centro-custos", label: "Centro de Custos", icon: Layers },
   { href: "/ordens-servico", label: "Ordens de Servico", icon: ClipboardList },
   { href: "/colaboradores", label: "Colaboradores", icon: Users },
   { href: "/estoque", label: "Estoque", icon: Package },
   { href: "/veiculos", label: "Veiculos", icon: Truck },
   { href: "/clientes", label: "Clientes", icon: UserCircle },
+  { href: "/galeria", label: "Galeria", icon: ImageIcon },
+  { href: "/compras", label: "Compras", icon: ShoppingCart },
   { href: "/relatorios", label: "Relatorios", icon: BarChart3 },
+  { href: "/relatorios-pdf", label: "Relatorios PDF", icon: FileText },
   { href: "/documentos", label: "Documentos", icon: FolderOpen },
+  { href: "/cronograma", label: "Cronograma", icon: Calendar },
+  { href: "/diario-obra", label: "Diario de Obra", icon: BookOpen },
 ];
 
 const adminItems = [
@@ -101,9 +114,9 @@ export function Sidebar() {
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
         <div className="flex items-center gap-2">
           {isOpen ? (
-            <Image src="/logo.svg" alt="Smart Obra" width={150} height={36} className="h-9 w-auto" priority />
+            <NextImage src="/logo.svg" alt="Smart Obra" width={150} height={36} className="h-9 w-auto" priority />
           ) : (
-            <Image src="/logo-icon.svg" alt="Smart Obra" width={36} height={36} className="h-9 w-9" priority />
+            <NextImage src="/logo-icon.svg" alt="Smart Obra" width={36} height={36} className="h-9 w-9" priority />
           )}
         </div>
         <button

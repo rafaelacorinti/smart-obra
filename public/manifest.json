@@ -1,0 +1,23 @@
+{
+  "name": "Smart Obra",
+  "short_name": "SmartObra",
+  "description": "ERP para Construcao Civil",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "lang": "pt-BR"
+}
