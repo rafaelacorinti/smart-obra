@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "Smart Obra",
   "short_name": "SmartObra",
   "description": "Sistema inteligente de gestão de obras",
@@ -20,5 +20,10 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "lang": "pt-BR"
 }
