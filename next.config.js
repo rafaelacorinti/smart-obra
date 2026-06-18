@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // REMOVED: output: 'standalone' — switched to next start for reliable asset serving
   eslint: {
     ignoreDuringBuilds: true,
   },
