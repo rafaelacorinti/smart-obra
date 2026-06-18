@@ -8,11 +8,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Smart Obra - ERP para Construcao Civil",
   description: "Sistema completo de gestao para empresas de construcao civil e servicos",
-  manifest: "/manifest.json",
+  manifest: "/manifest.json?v=2",
   icons: {
-    icon: "/logo-icon.svg",
-    shortcut: "/logo-icon.svg",
-    apple: "/logo-icon.svg",
+    icon: "/logo-icon.svg?v=2",
+    shortcut: "/logo-icon.svg?v=2",
+    apple: "/logo-icon.svg?v=2",
   },
 };
 
