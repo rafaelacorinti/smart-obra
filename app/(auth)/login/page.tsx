@@ -78,7 +78,7 @@ export default function LoginPage() {
                 type="email"
                 {...register("email")}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                placeholder="admin@smartobra.com"
+                placeholder="Digite seu email"
               />
               {errors.email && (
                 <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
@@ -94,7 +94,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   {...register("password")}
                   className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="Digite sua senha"
                 />
                 <button
                   type="button"
@@ -132,12 +132,6 @@ export default function LoginPage() {
             >
               Solicitar acesso
             </Link>
-          </div>
-
-          <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-            <p className="text-center text-xs text-gray-500 dark:text-gray-400">
-              Demo: admin@smartobra.com / smart123
-            </p>
           </div>
         </div>
       </div>
