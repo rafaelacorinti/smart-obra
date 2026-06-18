@@ -1,5 +1,7 @@
-﻿import { LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+﻿import { cn } from "@/lib/utils";
+import type { FC, SVGProps } from "react";
+
+type LucideIcon = FC<SVGProps<SVGSVGElement>>;
 
 interface StatCardProps {
   title: string;

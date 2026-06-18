@@ -216,7 +216,7 @@ export default function OrcadoRealizadoPage() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="categoria" className="text-xs" />
               <YAxis className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+              <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
               <Legend />
               <Bar dataKey="Planejado" fill="#6366f1" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Realizado" fill="#f59e0b" radius={[4, 4, 0, 0]} />

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { Calendar, Edit2, AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react";
@@ -369,7 +369,7 @@ export default function CronogramaPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" fontSize={12} />
                       <YAxis unit="%" fontSize={12} />
-                      <Tooltip formatter={(value: number) => `${value}%`} />
+                      <Tooltip formatter={(value: any) => `${value}%`} />
                       <Legend />
                       <Line type="monotone" dataKey="planejado" stroke="#3b82f6" strokeWidth={2} name="Planejado" dot={{ r: 4 }} />
                       <Line type="monotone" dataKey="realizado" stroke="#22c55e" strokeWidth={2} name="Realizado" dot={{ r: 4 }} />

@@ -337,7 +337,7 @@ export default function CentroCustosPage() {
               <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
                 {pieData.map((_, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
               </Pie>
-              <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+              <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>

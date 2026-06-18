@@ -662,7 +662,7 @@ export default function FinanceiroPage() {
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Tooltip formatter={(v: any) => fmt(v)} />
                 <Legend />
                 <Bar dataKey="entradas" name="Entradas" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="saidas" name="Saídas" fill="#ef4444" radius={[4, 4, 0, 0]} />
@@ -678,7 +678,7 @@ export default function FinanceiroPage() {
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Tooltip formatter={(v: any) => fmt(v)} />
                 <Line
                   type="monotone"
                   dataKey="saldo"

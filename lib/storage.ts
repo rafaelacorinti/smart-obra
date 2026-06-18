@@ -64,3 +64,20 @@ export class StorageService<T extends { id: string }> {
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
+
+// Domain-specific storage instances
+import { Contrato, Despesa, Documento, Compra, OrdemServico, SearchResult } from "@/types";
+
+interface StorageObra { id: string; createdAt: string; [key: string]: any; }
+interface StorageCliente { id: string; createdAt: string; [key: string]: any; }
+interface StorageDiario { id: string; createdAt: string; [key: string]: any; }
+
+export const obrasStorage = new StorageService<StorageObra>("smart-obra-obras");
+export const clientesStorage = new StorageService<StorageCliente>("smart-obra-clientes");
+export const contratosStorage = new StorageService<Contrato & { id: string }>("smart-obra-contratos");
+export const despesasStorage = new StorageService<Despesa & { id: string }>("smart-obra-despesas");
+export const orcamentosStorage = new StorageService<any>("smart-obra-orcamentos");
+export const documentosStorage = new StorageService<Documento & { id: string }>("smart-obra-documentos");
+export const comprasStorage = new StorageService<Compra & { id: string }>("smart-obra-compras");
+export const ordensStorage = new StorageService<OrdemServico & { id: string }>("smart-obra-ordens");
+export const diariosStorage = new StorageService<StorageDiario>("smart-obra-diarios");

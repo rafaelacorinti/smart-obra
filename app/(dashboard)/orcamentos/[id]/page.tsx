@@ -544,10 +544,10 @@ export default function OrcamentoDetalhe() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPie>
-                  <Pie data={dadosGrafico} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                  <Pie data={dadosGrafico} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }: any) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}>
                     {dadosGrafico.map((_, index) => (<Cell key={`cell-${index}`} fill={CORES_GRAFICO[index % CORES_GRAFICO.length]} />))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip formatter={(value: any) => formatCurrency(value)} />
                   <Legend />
                 </RechartsPie>
               </ResponsiveContainer>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -185,7 +185,7 @@ export default function RelatoriosPdfPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
+                    <Tooltip formatter={(value: any) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
                     <Legend />
                     <Bar dataKey="receitas" fill="#10b981" name="Receitas" />
                     <Bar dataKey="despesas" fill="#ef4444" name="Despesas" />
@@ -197,10 +197,10 @@ export default function RelatoriosPdfPage() {
                 <Card><CardHeader><CardTitle className="text-base">Despesas por Categoria</CardTitle></CardHeader><CardContent>
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                      <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }: any) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}>
                         {pieData.map((_, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
+                      <Tooltip formatter={(value: any) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent></Card>
@@ -230,7 +230,7 @@ export default function RelatoriosPdfPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="nome" width={150} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value: number) => `${value}%`} />
+                    <Tooltip formatter={(value: any) => `${value}%`} />
                     <Bar dataKey="progresso" fill="#3b82f6" name="Progresso (%)" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -242,7 +242,7 @@ export default function RelatoriosPdfPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
+                    <Tooltip formatter={(value: any) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
                     <Legend />
                     <Bar dataKey="orcamento" fill="#3b82f6" name="Orcamento" />
                     <Bar dataKey="gastoReal" fill="#f59e0b" name="Gasto Real" />
@@ -297,7 +297,7 @@ export default function RelatoriosPdfPage() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
+                    <Tooltip formatter={(value: any) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
                     <Legend />
                     <Line type="monotone" dataKey="receitas" stroke="#10b981" name="Receitas" strokeWidth={2} />
                     <Line type="monotone" dataKey="despesas" stroke="#ef4444" name="Despesas" strokeWidth={2} />

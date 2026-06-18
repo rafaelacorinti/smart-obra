@@ -317,7 +317,7 @@ export default function VeiculoDetalhesPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="mes" />
                   <YAxis />
-                  <Tooltip formatter={(value: number) => [`${value.toFixed(0)} L`, "Litros"]} />
+                  <Tooltip formatter={(value: any) => [`${Number(value).toFixed(0)} L`, "Litros"]} />
                   <Bar dataKey="litros" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -481,12 +481,12 @@ export default function VeiculoDetalhesPage() {
               <h4 className="font-medium mb-4">Distribuicao de Custos</h4>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={custosPieData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  <Pie data={custosPieData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
                     {custosPieData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip formatter={(value: any) => formatCurrency(value)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>

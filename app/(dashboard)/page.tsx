@@ -278,7 +278,7 @@ export default function DashboardPage() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis type="number" className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
               <YAxis type="category" dataKey="name" className="text-xs" width={75} />
-              <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+              <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
               <Bar dataKey="value" name="Valor" fill="#6366f1" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -294,7 +294,7 @@ export default function DashboardPage() {
               <Pie data={despesasPorCentro} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
                 {despesasPorCentro.map((_, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
               </Pie>
-              <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+              <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -308,7 +308,7 @@ export default function DashboardPage() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="name" className="text-xs" />
               <YAxis className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+              <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
               <Bar dataKey="value" name="Receita" fill="#1e40af" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -323,7 +323,7 @@ export default function DashboardPage() {
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis dataKey="name" className="text-xs" />
             <YAxis className="text-xs" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-            <RechartsTooltip formatter={(value: number) => formatCurrency(value)} />
+            <RechartsTooltip formatter={(value: any) => formatCurrency(value)} />
             <Bar dataKey="positivo" name="Lucro" fill="#10b981" radius={[4, 4, 0, 0]} stackId="stack" />
             <Bar dataKey="negativo" name="Prejuizo" fill="#ef4444" radius={[4, 4, 0, 0]} stackId="stack" />
           </BarChart>

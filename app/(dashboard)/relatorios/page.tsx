@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -165,7 +165,7 @@ function RelatorioFinanceiro({ lancamentos }: { lancamentos: any[] }) {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="mes" />
             <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+            <Tooltip formatter={(value: any) => formatCurrency(value)} />
             <Legend />
             <Bar dataKey="receitas" name="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
             <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
@@ -222,7 +222,7 @@ function RelatorioLucroObra({ obras, lancamentos }: { obras: any[]; lancamentos:
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
             <YAxis dataKey="nome" type="category" width={150} />
-            <Tooltip formatter={(value: number) => formatCurrency(value)} />
+            <Tooltip formatter={(value: any) => formatCurrency(value)} />
             <Legend />
             <Bar dataKey="receita" name="Receita" fill="#10b981" />
             <Bar dataKey="custo" name="Custo" fill="#ef4444" />
@@ -256,12 +256,12 @@ function RelatorioCustos({ lancamentos }: { lancamentos: any[] }) {
           <h4 className="font-medium mb-4">Despesas por Categoria</h4>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={porCategoria} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+              <Pie data={porCategoria} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
                 {porCategoria.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              <Tooltip formatter={(value: any) => formatCurrency(value)} />
             </PieChart>
           </ResponsiveContainer>
         </div>

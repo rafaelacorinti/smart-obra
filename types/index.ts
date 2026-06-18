@@ -42,3 +42,78 @@ export interface AccessRequest {
   status: AccessRequestStatus;
   createdAt: string;
 }
+
+// Types used by dashboard modules
+export interface Contrato {
+  id: string;
+  obraId: string;
+  clienteId: string;
+  valor: number;
+  dataInicio: string;
+  dataFim: string;
+  status: "ativo" | "encerrado" | "cancelado";
+  descricao: string;
+  createdAt: string;
+}
+
+export interface Despesa {
+  id: string;
+  obraId: string;
+  descricao: string;
+  valor: number;
+  categoria: string;
+  data: string;
+  comprovante?: string;
+  createdAt: string;
+}
+
+export interface Documento {
+  id: string;
+  obraId: string;
+  nome: string;
+  tipo: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface Compra {
+  id: string;
+  obraId: string;
+  fornecedor: string;
+  itens: CompraItem[];
+  valorTotal: number;
+  status: "pendente" | "aprovada" | "entregue" | "cancelada";
+  dataPedido: string;
+  dataEntrega?: string;
+  createdAt: string;
+}
+
+export interface CompraItem {
+  descricao: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+}
+
+export interface OrdemServico {
+  id: string;
+  obraId: string;
+  titulo: string;
+  descricao: string;
+  responsavel: string;
+  status: "aberta" | "em_execucao" | "concluida" | "cancelada";
+  prioridade: "baixa" | "media" | "alta" | "urgente";
+  dataAbertura: string;
+  dataConclusao?: string;
+  createdAt: string;
+}
+
+export type SearchResultType = "obra" | "cliente" | "contrato" | "despesa" | "orcamento" | "documento" | "compra" | "os";
+
+export interface SearchResult {
+  id: string;
+  type: SearchResultType;
+  title: string;
+  subtitle: string;
+  url: string;
+}
