@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // REMOVED: output: 'standalone' — switched to next start for reliable asset serving
+  // Force new build id on every deploy to bust CDN cache
+  generateBuildId: async () => 'build-' + Date.now(),
   eslint: {
     ignoreDuringBuilds: true,
   },
