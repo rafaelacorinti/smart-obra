@@ -102,7 +102,47 @@ export function useObras() {
     refresh();
   }, [refresh]);
 
-  return { obras, loading, createObra, updateObra, deleteObra, refresh };
+  const deleteObraCascade = useCallback((id: string) => {
+    // Delete obra
+    obrasStorage.delete(id);
+    
+    // Delete from storage instances
+    const storages = [
+      lancamentosStorage, ordensStorage, colaboradoresObraStorage,
+      materiaisObraStorage, diarioStorage, timelineStorage,
+      documentosStorage, fotosStorage
+    ];
+    storages.forEach((storage) => {
+      const all = storage.getAll();
+      all.filter((item: any) => item.obraId === id).forEach((item: any) => storage.delete(item.id));
+    });
+
+    // Delete from inline localStorage keys
+    const inlineKeys = [
+      "smart-obra-compras", "smart-obra-centro-custos", "smart-obra-cronograma",
+      "smart-obra-documents", "smart-obra-galeria", "smart-obra-orcado-realizado"
+    ];
+    inlineKeys.forEach((key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (Array.isArray(data)) {
+            const filtered = data.filter((item: any) => item.obraId !== id);
+            localStorage.setItem(key, JSON.stringify(filtered));
+          }
+        }
+      } catch {}
+    });
+
+    // Also delete orcamentos linked to this obra
+    const allOrcamentos = orcamentosStorage.getAll();
+    allOrcamentos.filter((o: any) => o.obraId === id).forEach((o: any) => orcamentosStorage.delete(o.id));
+    
+    refresh();
+  }, [refresh]);
+
+  return { obras, loading, createObra, updateObra, deleteObra, deleteObraCascade, refresh };
 }
 
 export function useLancamentos(obraId?: string) {

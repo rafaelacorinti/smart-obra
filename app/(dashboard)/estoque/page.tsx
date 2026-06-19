@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -124,6 +124,7 @@ export default function EstoquePage() {
   const [filterFornecedor, setFilterFornecedor] = useState("TODOS");
   const [filterAlerta, setFilterAlerta] = useState(false);
   const [filterCategoria, setFilterCategoria] = useState("TODAS");
+  const [filtroObra, setFiltroObra] = useState<string>("TODOS");
 
   const materialForm = useForm<MaterialForm>({
     resolver: zodResolver(materialSchema),
@@ -150,6 +151,11 @@ export default function EstoquePage() {
       return true;
     });
   }, [materiais, filterFornecedor, filterAlerta, filterCategoria]);
+
+  const movimentacoesFiltradas = useMemo(() => {
+    if (filtroObra === "TODOS") return movimentacoes;
+    return movimentacoes.filter((m) => m.obraId === filtroObra);
+  }, [movimentacoes, filtroObra]);
 
   function openNewMaterial() {
     setEditingMaterialId(null);
@@ -409,13 +415,25 @@ export default function EstoquePage() {
         </TabsContent>
 
         <TabsContent value="movimentacoes">
-          <div className="mb-4 flex justify-end">
-            <Button size="sm" onClick={() => setMovDialogOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" /> Nova Movimentacao
-            </Button>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <select
+              value={filtroObra}
+              onChange={(e) => setFiltroObra(e.target.value)}
+              className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="TODOS">Todas as Obras</option>
+              {obras.map((obra) => (
+                <option key={obra.id} value={obra.id}>{obra.nome}</option>
+              ))}
+            </select>
+            <div className="ml-auto">
+              <Button size="sm" onClick={() => setMovDialogOpen(true)}>
+                <Plus className="mr-1 h-4 w-4" /> Nova Movimentacao
+              </Button>
+            </div>
           </div>
           <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <DataTable data={movimentacoes} columns={movimentacaoColumns} searchPlaceholder="Buscar movimentacao..." pageSize={15} />
+            <DataTable data={movimentacoesFiltradas} columns={movimentacaoColumns} searchPlaceholder="Buscar movimentacao..." pageSize={15} />
           </div>
         </TabsContent>
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import { Plus, Search, MapPin, LayoutGrid, List, Filter, Building2 } from "lucide-react";
@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useObras } from "@/hooks/use-storage-data";
+import { useObras, useClientes } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 
@@ -21,6 +21,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export default function ObrasPage() {
   const { obras, loading } = useObras();
+  const { clientes } = useClientes();
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("TODOS");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
@@ -128,7 +129,7 @@ export default function ObrasPage() {
                     {statusConfig[obra.status]?.label}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{obra.cliente}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{clientes.find((c) => c.id === obra.clienteId)?.nome || obra.cliente || "Sem cliente"}</p>
                 <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                   <MapPin className="h-3 w-3" />
                   {obra.cidade}, {obra.estado}
@@ -170,7 +171,7 @@ export default function ObrasPage() {
                   <td className="px-4 py-3">
                     <Link href={`/obras/${obra.id}`} className="font-medium hover:text-primary">{obra.nome}</Link>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{obra.cliente}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">{clientes.find((c) => c.id === obra.clienteId)?.nome || obra.cliente || "Sem cliente"}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">{obra.cidade}, {obra.estado}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusConfig[obra.status]?.color}`}>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +24,7 @@ import {
   Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from "@/components/ui/select";
 
-import { useColaboradores, usePresencas } from "@/hooks/use-storage-data";
+import { useColaboradores, usePresencas, useObras } from "@/hooks/use-storage-data";
 import { Colaborador } from "@/lib/mock-data";
 
 const colaboradorSchema = z.object({
@@ -70,12 +70,14 @@ export default function ColaboradoresPage() {
   const router = useRouter();
   const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador } = useColaboradores();
   const { presencas, loading: loadingPresencas } = usePresencas();
+  const { obras } = useObras();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("TODOS");
   const [filterSetor, setFilterSetor] = useState("TODOS");
+  const [filtroObra, setFiltroObra] = useState<string>("TODOS");
 
   const form = useForm<ColaboradorForm>({
     resolver: zodResolver(colaboradorSchema),
@@ -105,12 +107,15 @@ export default function ColaboradoresPage() {
   }, [colaboradores]);
 
   const filtrados = useMemo(() => {
-    return colaboradores.filter((c) => {
+    return colaboradores.filter((col) => {
+      const c = col as Colaborador;
       if (filterStatus !== "TODOS" && c.status !== filterStatus) return false;
       if (filterSetor !== "TODOS" && c.cargo !== filterSetor) return false;
+      const matchObra = filtroObra === "TODOS" || (col as any).obraId === filtroObra;
+      if (!matchObra) return false;
       return true;
     });
-  }, [colaboradores, filterStatus, filterSetor]);
+  }, [colaboradores, filterStatus, filterSetor, filtroObra]);
 
   function openNew() {
     setEditingId(null);
@@ -236,6 +241,17 @@ export default function ColaboradoresPage() {
           </SelectContent>
         </Select>
 
+          <select
+            value={filtroObra}
+            onChange={(e) => setFiltroObra(e.target.value)}
+            className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="TODOS">Todas as Obras</option>
+            {obras.map((obra) => (
+              <option key={obra.id} value={obra.id}>{obra.nome}</option>
+            ))}
+          </select>
+
         <Button variant="outline" size="sm" onClick={() => { setFilterStatus("TODOS"); setFilterSetor("TODOS"); }}>
           Limpar filtros
         </Button>
@@ -303,6 +319,19 @@ export default function ColaboradoresPage() {
                 </Select>
               </div>
             </div>
+            <div>
+                  <label className="text-sm font-medium">Obra (opcional)</label>
+                  <select
+                    value={(form.watch as any)("obraId") || ""}
+                    onChange={(e) => (form.setValue as any)("obraId", e.target.value || undefined)}
+                    className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Nenhuma</option>
+                    {obras.map((obra) => (
+                      <option key={obra.id} value={obra.id}>{obra.nome}</option>
+                    ))}
+                  </select>
+                </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
               <Button type="submit">{editingId ? "Salvar" : "Criar"}</Button>

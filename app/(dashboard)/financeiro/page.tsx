@@ -103,6 +103,9 @@ export default function FinanceiroPage() {
   // Fluxo filter
   const [fluxoAno, setFluxoAno] = useState(String(new Date().getFullYear()));
 
+  // Global obra filter (Lançamentos tab)
+  const [filtroObraGlobal, setFiltroObraGlobal] = useState<string>("TODOS");
+
   // DRE filters
   const [dreAno, setDreAno] = useState(String(new Date().getFullYear()));
   const [dreMes, setDreMes] = useState("TODOS");
@@ -147,15 +150,20 @@ export default function FinanceiroPage() {
 
   // ─── Filtered lancamentos ────────────────────────────────────────────────
 
+  const lancamentosFiltradosPorObra = useMemo(() => {
+    if (filtroObraGlobal === "TODOS") return lancamentos;
+    return lancamentos.filter((l) => l.obraId === filtroObraGlobal);
+  }, [lancamentos, filtroObraGlobal]);
+
   const lancamentosFiltrados = useMemo(() => {
-    return lancamentos.filter((l) => {
+    return lancamentosFiltradosPorObra.filter((l) => {
       if (filterTipo !== "TODOS" && l.tipo !== filterTipo) return false;
       if (filterStatus !== "TODOS" && l.status !== filterStatus) return false;
       if (filterCategoria !== "TODOS" && l.categoria !== filterCategoria) return false;
       if (filterMes !== "TODOS" && !l.data.startsWith(filterMes)) return false;
       return true;
     });
-  }, [lancamentos, filterTipo, filterStatus, filterCategoria, filterMes]);
+  }, [lancamentosFiltradosPorObra, filterTipo, filterStatus, filterCategoria, filterMes]);
 
   // ─── Form open/close ─────────────────────────────────────────────────────
 
@@ -549,6 +557,17 @@ export default function FinanceiroPage() {
                 ))}
               </SelectContent>
             </Select>
+
+            <select
+              value={filtroObraGlobal}
+              onChange={(e) => setFiltroObraGlobal(e.target.value)}
+              className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="TODOS">Todas as Obras</option>
+              {obras.map((obra) => (
+                <option key={obra.id} value={obra.id}>{obra.nome}</option>
+              ))}
+            </select>
 
             <Button
               variant="outline"

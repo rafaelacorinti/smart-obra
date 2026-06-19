@@ -27,7 +27,7 @@ import {
   Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from "@/components/ui/select";
 
-import { useOrdensServico, useColaboradores } from "@/hooks/use-storage-data";
+import { useOrdensServico, useColaboradores, useObras } from "@/hooks/use-storage-data";
 import { OrdemServico, ChecklistItem } from "@/lib/mock-data";
 import { generateId } from "@/lib/storage";
 
@@ -91,17 +91,20 @@ const PRIORIDADE_LABELS: Record<string, string> = {
 export default function OrdensServicoPage() {
   const { ordens, loading, createOrdem, updateOrdem, deleteOrdem } = useOrdensServico();
   const { colaboradores } = useColaboradores();
+  const { obras } = useObras();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [newChecklistItem, setNewChecklistItem] = useState("");
+  const [formObraId, setFormObraId] = useState<string | undefined>(undefined);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState("TODOS");
   const [filterPrioridade, setFilterPrioridade] = useState("TODOS");
   const [filterTecnico, setFilterTecnico] = useState("TODOS");
+  const [filtroObra, setFiltroObra] = useState<string>("TODOS");
 
   const form = useForm<OSForm>({
     resolver: zodResolver(osSchema),
@@ -128,9 +131,11 @@ export default function OrdensServicoPage() {
       if (filterStatus !== "TODOS" && o.status !== filterStatus) return false;
       if (filterPrioridade !== "TODOS" && o.prioridade !== filterPrioridade) return false;
       if (filterTecnico !== "TODOS" && o.tecnico !== filterTecnico) return false;
+      const matchObra = filtroObra === "TODOS" || o.obraId === filtroObra;
+      if (!matchObra) return false;
       return true;
     });
-  }, [ordens, filterStatus, filterPrioridade, filterTecnico]);
+  }, [ordens, filterStatus, filterPrioridade, filterTecnico, filtroObra]);
 
   const tecnicos = useMemo(() => {
     return Array.from(new Set(ordens.map((o) => o.tecnico))).sort();
@@ -140,6 +145,7 @@ export default function OrdensServicoPage() {
 
   function openNew() {
     setEditingId(null);
+    setFormObraId(undefined);
     form.reset({
       cliente: "", local: "", tecnicoId: "", tecnico: "",
       tipoServico: "", descricao: "", prioridade: "MEDIA",
@@ -150,6 +156,7 @@ export default function OrdensServicoPage() {
 
   function openEdit(os: OrdemServico) {
     setEditingId(os.id);
+    setFormObraId(os.obraId);
     form.reset({
       cliente: os.cliente, local: os.local, tecnicoId: os.tecnicoId,
       tecnico: os.tecnico, tipoServico: os.tipoServico,
@@ -168,13 +175,13 @@ export default function OrdensServicoPage() {
     };
 
     if (editingId) {
-      updateOrdem(editingId, data);
+      updateOrdem(editingId, { ...data, obraId: formObraId });
     } else {
       const maxNumero = ordens.reduce((max, o) => Math.max(max, o.numero), 1000);
       createOrdem({
         ...data,
         numero: maxNumero + 1,
-        obraId: undefined,
+        obraId: formObraId,
         clienteId: undefined,
         status: "ABERTA",
         dataAbertura: new Date().toISOString().split("T")[0],
@@ -363,10 +370,21 @@ export default function OrdensServicoPage() {
           </SelectContent>
         </Select>
 
+          <select
+            value={filtroObra}
+            onChange={(e) => setFiltroObra(e.target.value)}
+            className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="TODOS">Todas as Obras</option>
+            {obras.map((obra) => (
+              <option key={obra.id} value={obra.id}>{obra.nome}</option>
+            ))}
+          </select>
+
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { setFilterStatus("TODOS"); setFilterPrioridade("TODOS"); setFilterTecnico("TODOS"); }}
+          onClick={() => { setFilterStatus("TODOS"); setFilterPrioridade("TODOS"); setFilterTecnico("TODOS"); setFiltroObra("TODOS"); }}
         >
           Limpar filtros
         </Button>
@@ -458,6 +476,20 @@ export default function OrdensServicoPage() {
             <div className="space-y-1">
               <Label>Observacoes</Label>
               <Textarea {...form.register("observacoes")} rows={2} placeholder="Observacoes adicionais..." />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Obra</label>
+              <select
+                value={formObraId || ""}
+                onChange={(e) => setFormObraId(e.target.value || undefined)}
+                className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Geral (sem obra)</option>
+                {obras.map((obra) => (
+                  <option key={obra.id} value={obra.id}>{obra.nome}</option>
+                ))}
+              </select>
             </div>
 
             <DialogFooter>

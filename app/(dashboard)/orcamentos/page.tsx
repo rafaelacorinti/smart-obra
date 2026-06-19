@@ -3,29 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, Search, FileText, Trash2, FileCode2 } from "lucide-react";
-import { useOrcamentos } from "@/hooks/use-storage-data";
+import { useOrcamentos, useObras } from "@/hooks/use-storage-data";
 import { generateId } from "@/lib/storage";
 
 export default function OrcamentosPage() {
   const { orcamentos, deleteOrcamento, createOrcamento } = useOrcamentos();
+  const { obras } = useObras();
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
+  const [filtroObra, setFiltroObra] = useState<string>("TODOS");
   const [busca, setBusca] = useState("");
 
   const orcamentosFiltrados = orcamentos.filter((orc) => {
     const matchStatus = filtroStatus === "todos" || orc.status === filtroStatus;
+    const matchObra = filtroObra === "TODOS" || orc.obraId === filtroObra;
     const matchBusca =
       busca === "" ||
       orc.nome.toLowerCase().includes(busca.toLowerCase()) ||
       orc.obraNome?.toLowerCase().includes(busca.toLowerCase());
-    return matchStatus && matchBusca;
+    return matchStatus && matchBusca && matchObra;
   });
 
   const handleNovoOrcamento = () => {
     const novoId = generateId();
+    const obraFiltrada = filtroObra !== "TODOS" ? obras.find((o) => o.id === filtroObra) : undefined;
     createOrcamento({
       nome: "Novo Orcamento",
-      obraId: "",
-      obraNome: "",
+      obraId: obraFiltrada?.id ?? "",
+      obraNome: obraFiltrada?.nome ?? "",
       clienteNome: "",
       uf: "SP",
       bdi: 25,
@@ -140,6 +144,16 @@ export default function OrcamentosPage() {
             </button>
           ))}
         </div>
+        <select
+          value={filtroObra}
+          onChange={(e) => setFiltroObra(e.target.value)}
+          className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="TODOS">Todas as Obras</option>
+          {obras.map((obra) => (
+            <option key={obra.id} value={obra.id}>{obra.nome}</option>
+          ))}
+        </select>
       </div>
 
       {/* List */}

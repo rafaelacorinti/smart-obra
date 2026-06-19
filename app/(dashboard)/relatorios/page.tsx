@@ -25,6 +25,7 @@ const reports = [
 export default function RelatoriosPage() {
   const [activeReport, setActiveReport] = useState<ReportType>(null);
   const [periodo, setPeriodo] = useState({ inicio: "2024-01-01", fim: "2024-12-31" });
+  const [filtroObra, setFiltroObra] = useState<string>("TODOS");
 
   const { obras } = useObras();
   const { lancamentos } = useLancamentos();
@@ -38,8 +39,12 @@ export default function RelatoriosPage() {
   const { movimentacoes } = useMovimentacoes();
 
   const lancamentosFiltrados = useMemo(() => {
-    return lancamentos.filter((l) => l.data >= periodo.inicio && l.data <= periodo.fim);
-  }, [lancamentos, periodo]);
+    return lancamentos.filter((l) => {
+      const dentroDoperiodo = l.data >= periodo.inicio && l.data <= periodo.fim;
+      const dentroObra = filtroObra === "TODOS" || l.obraId === filtroObra;
+      return dentroDoperiodo && dentroObra;
+    });
+  }, [lancamentos, periodo, filtroObra]);
 
   const handleExportExcel = (data: any[], filename: string) => {
     const ws = XLSX.utils.json_to_sheet(data);
@@ -108,10 +113,20 @@ export default function RelatoriosPage() {
           <label className="text-xs text-muted-foreground">Ate</label>
           <input type="date" value={periodo.fim} onChange={(e) => setPeriodo({...periodo, fim: e.target.value})} className="ml-2 rounded-lg border bg-background px-3 py-1.5 text-sm" />
         </div>
+        <select
+          value={filtroObra}
+          onChange={(e) => setFiltroObra(e.target.value)}
+          className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="TODOS">Todas as Obras</option>
+          {obras.map((obra) => (
+            <option key={obra.id} value={obra.id}>{obra.nome}</option>
+          ))}
+        </select>
       </div>
 
       {activeReport === "financeiro" && <RelatorioFinanceiro lancamentos={lancamentosFiltrados} />}
-      {activeReport === "lucro-obra" && <RelatorioLucroObra obras={obras} lancamentos={lancamentosFiltrados} />}
+      {activeReport === "lucro-obra" && <RelatorioLucroObra obras={filtroObra === "TODOS" ? obras : obras.filter((o) => o.id === filtroObra)} lancamentos={lancamentosFiltrados} />}
       {activeReport === "custos-categoria" && <RelatorioCustos lancamentos={lancamentosFiltrados} />}
       {activeReport === "produtividade" && <RelatorioProdutividade colaboradores={colaboradores} presencas={presencas} ordens={ordens} />}
       {activeReport === "combustivel" && <RelatorioCombustivel veiculos={veiculos} abastecimentos={abastecimentos} />}

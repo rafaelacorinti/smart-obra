@@ -9,16 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useObras } from "@/hooks/use-storage-data";
+import { useObras, useClientes } from "@/hooks/use-storage-data";
 import Link from "next/link";
-
-const clientes = [
-  { id: "cli-1", nome: "Maria Oliveira" },
-  { id: "cli-2", nome: "Tech Corp Ltda" },
-  { id: "cli-3", nome: "Startup Innovation" },
-  { id: "cli-4", nome: "Invest Group SA" },
-  { id: "cli-5", nome: "Construtora ABC" },
-];
 
 interface FormErrors {
   nome?: string;
@@ -31,6 +23,7 @@ interface FormErrors {
 export default function NovaObraPage() {
   const router = useRouter();
   const { createObra } = useObras();
+  const { clientes } = useClientes();
   const [fotoCapa, setFotoCapa] = useState<string>("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [formData, setFormData] = useState({

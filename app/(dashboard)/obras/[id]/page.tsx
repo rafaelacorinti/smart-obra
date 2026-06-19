@@ -22,7 +22,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   useObras, useLancamentos, useDiarioObra, useFotosObra,
-  useDocumentosObra, useTimelineObra, useColaboradoresObra, useMateriaisObra
+  useDocumentosObra, useTimelineObra, useColaboradoresObra, useMateriaisObra,
+  useClientes
 } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
 import { Obra } from "@/lib/mock-data";
@@ -55,7 +56,7 @@ export default function ObraDetailPage() {
   const router = useRouter();
   const obraId = params.id as string;
 
-  const { obras, loading: loadingObra } = useObras();
+  const { obras, loading: loadingObra, deleteObraCascade } = useObras();
   const { lancamentos, createLancamento } = useLancamentos(obraId);
   const { entradas, addEntrada } = useDiarioObra(obraId);
   const { fotos, addFoto } = useFotosObra(obraId);
@@ -63,6 +64,9 @@ export default function ObraDetailPage() {
   const { eventos: timelineEventos, addEvento } = useTimelineObra(obraId);
   const { colaboradores, addColaborador, removeColaborador } = useColaboradoresObra(obraId);
   const { materiais, addMaterial } = useMateriaisObra(obraId);
+
+  const { clientes } = useClientes();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [mounted, setMounted] = useState(false);
   const [showDiarioForm, setShowDiarioForm] = useState(false);
@@ -86,6 +90,7 @@ export default function ObraDetailPage() {
   useEffect(() => { setMounted(true); }, []);
 
   const obra = obras.find((o) => o.id === obraId);
+  const clienteVinculado = obra ? clientes.find((c) => c.id === obra.clienteId) : undefined;
 
   if (!mounted || loadingObra) {
     return (
@@ -204,12 +209,18 @@ export default function ObraDetailPage() {
         title={obra.nome}
         breadcrumbs={[{ label: "Obras", href: "/obras" }, { label: obra.nome }]}
         actions={
-          <Link href="/obras">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
+          <div className="flex gap-2">
+            <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir Obra
             </Button>
-          </Link>
+            <Link href="/obras">
+              <Button variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -255,6 +266,22 @@ export default function ObraDetailPage() {
                   </div>
                 </div>
                 {obra.descricao && <p className="mt-4 text-sm text-muted-foreground">{obra.descricao}</p>}
+
+                {/* Cliente vinculado */}
+                {clienteVinculado && (
+                  <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Cliente Vinculado
+                    </h4>
+                    <div className="grid gap-2 sm:grid-cols-2 text-sm">
+                      <div><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{clienteVinculado.nome}</span></div>
+                      <div><span className="text-muted-foreground">CPF/CNPJ:</span> <span className="font-medium">{clienteVinculado.cpfCnpj}</span></div>
+                      <div><span className="text-muted-foreground">Telefone:</span> <span className="font-medium">{clienteVinculado.telefone}</span></div>
+                      <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{clienteVinculado.email}</span></div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Progress */}
                 <div className="mt-6">
@@ -858,6 +885,28 @@ export default function ObraDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-xl border bg-card p-6 shadow-xl mx-4">
+            <h2 className="text-lg font-semibold text-red-600 mb-2">Excluir Obra</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Tem certeza? Todos os dados vinculados serao excluidos (orcamentos, despesas, OS, diario, fotos, compras, cronograma, centro de custos, documentos).
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => {
+                deleteObraCascade(obraId);
+                router.push("/obras");
+              }}>
+                Confirmar Exclusao
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightboxFoto && (

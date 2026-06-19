@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const { ordens, loading: loadingOS } = useOrdensServico();
   const { eventos } = useEventosCalendario();
   const [mounted, setMounted] = useState(false);
+  const [filtroObra, setFiltroObra] = useState<string>("TODOS");
 
   useEffect(() => {
     setMounted(true);
@@ -31,21 +32,37 @@ export default function DashboardPage() {
 
   const loading = !mounted || loadingObras || loadingFin || loadingOS;
 
+  // === FILTERED DATA ===
+  const lancamentosFiltrados = useMemo(() => {
+    if (filtroObra === "TODOS") return lancamentos;
+    return lancamentos.filter((l) => l.obraId === filtroObra);
+  }, [lancamentos, filtroObra]);
+
+  const ordensServicofiltrados = useMemo(() => {
+    if (filtroObra === "TODOS") return ordens;
+    return ordens.filter((o) => o.obraId === filtroObra);
+  }, [ordens, filtroObra]);
+
+  const obrasFiltradas = useMemo(() => {
+    if (filtroObra === "TODOS") return obras;
+    return obras.filter((o) => o.id === filtroObra);
+  }, [obras, filtroObra]);
+
   // === KPI CALCULATIONS ===
-  const obrasAtivas = obras.filter((o) => o.status === "EM_ANDAMENTO").length;
-  const obrasConcluidas = obras.filter((o) => o.status === "CONCLUIDA").length;
-  const obrasAtrasadas = obras.filter((o) => {
+  const obrasAtivas = obrasFiltradas.filter((o) => o.status === "EM_ANDAMENTO").length;
+  const obrasConcluidas = obrasFiltradas.filter((o) => o.status === "CONCLUIDA").length;
+  const obrasAtrasadas = obrasFiltradas.filter((o) => {
     if (o.status === "CONCLUIDA" || o.status === "CANCELADA") return false;
     return new Date(o.previsaoTermino) < new Date();
   }).length;
 
-  const receitaPrevista = obras.reduce((sum, o) => sum + o.orcamento, 0);
-  const receitaRealizada = lancamentos
+  const receitaPrevista = obrasFiltradas.reduce((sum, o) => sum + o.orcamento, 0);
+  const receitaRealizada = lancamentosFiltrados
     .filter((l) => l.tipo === "RECEITA" && l.status === "PAGO")
     .reduce((sum, l) => sum + l.valor, 0);
 
-  const despesasPrevistas = obras.reduce((sum, o) => sum + o.orcamento * 0.7, 0);
-  const despesasRealizadas = lancamentos
+  const despesasPrevistas = obrasFiltradas.reduce((sum, o) => sum + o.orcamento * 0.7, 0);
+  const despesasRealizadas = lancamentosFiltrados
     .filter((l) => l.tipo === "DESPESA" && l.status === "PAGO")
     .reduce((sum, l) => sum + l.valor, 0);
 
@@ -57,19 +74,19 @@ export default function DashboardPage() {
     const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     return meses.map((mes, idx) => {
       const mesStr = String(idx + 1).padStart(2, "0");
-      const entradas = lancamentos
+      const entradas = lancamentosFiltrados
         .filter((l) => l.tipo === "RECEITA" && l.status === "PAGO" && l.data.startsWith(`2024-${mesStr}`))
         .reduce((sum, l) => sum + l.valor, 0);
-      const saidas = lancamentos
+      const saidas = lancamentosFiltrados
         .filter((l) => l.tipo === "DESPESA" && l.status === "PAGO" && l.data.startsWith(`2024-${mesStr}`))
         .reduce((sum, l) => sum + l.valor, 0);
       return { mes, entradas, saidas };
     }).filter((d) => d.entradas > 0 || d.saidas > 0);
-  }, [lancamentos]);
+  }, [lancamentosFiltrados]);
 
   const custosPorCategoria = useMemo(() => {
     const cats: Record<string, number> = {};
-    lancamentos
+    lancamentosFiltrados
       .filter((l) => l.tipo === "DESPESA" && l.status === "PAGO")
       .forEach((l) => {
         cats[l.categoria] = (cats[l.categoria] || 0) + l.valor;
@@ -77,14 +94,14 @@ export default function DashboardPage() {
     return Object.entries(cats)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [lancamentos]);
+  }, [lancamentosFiltrados]);
 
   const despesasPorCentro = useMemo(() => {
     const centros: Record<string, number> = {
       "Material": 0, "Mao de obra": 0, "Equipamento": 0,
       "Administrativo": 0, "Projeto": 0, "Outros": 0,
     };
-    lancamentos
+    lancamentosFiltrados
       .filter((l) => l.tipo === "DESPESA" && l.status === "PAGO")
       .forEach((l) => {
         if (centros[l.categoria] !== undefined) {
@@ -96,19 +113,19 @@ export default function DashboardPage() {
     return Object.entries(centros)
       .filter(([, v]) => v > 0)
       .map(([name, value]) => ({ name, value }));
-  }, [lancamentos]);
+  }, [lancamentosFiltrados]);
 
   const receitaPorObra = useMemo(() => {
-    return obras.map((o) => {
+    return obrasFiltradas.map((o) => {
       const receita = lancamentos
         .filter((l) => l.obraId === o.id && l.tipo === "RECEITA" && l.status === "PAGO")
         .reduce((sum, l) => sum + l.valor, 0);
       return { name: o.nome.length > 20 ? o.nome.slice(0, 20) + "..." : o.nome, value: receita };
     }).filter((d) => d.value > 0);
-  }, [obras, lancamentos]);
+  }, [obrasFiltradas, lancamentos]);
 
   const lucroPorObra = useMemo(() => {
-    return obras.map((o) => {
+    return obrasFiltradas.map((o) => {
       const receita = lancamentos
         .filter((l) => l.obraId === o.id && l.tipo === "RECEITA" && l.status === "PAGO")
         .reduce((sum, l) => sum + l.valor, 0);
@@ -118,25 +135,25 @@ export default function DashboardPage() {
       const lucro = receita - despesa;
       return { name: o.nome.length > 20 ? o.nome.slice(0, 20) + "..." : o.nome, lucro, positivo: lucro >= 0 ? lucro : 0, negativo: lucro < 0 ? lucro : 0 };
     });
-  }, [obras, lancamentos]);
+  }, [obrasFiltradas, lancamentos]);
 
   // === ALERTS ===
   const alerts = useMemo(() => {
     const alertList: Array<{ type: "error" | "warning" | "info"; icon: typeof AlertCircle; message: string }> = [];
 
-    obras.forEach((o) => {
+    obrasFiltradas.forEach((o) => {
       if (o.gastoReal > o.orcamento) {
         alertList.push({ type: "error", icon: AlertCircle, message: `${o.nome}: ultrapassou orcamento em ${formatCurrency(o.gastoReal - o.orcamento)}` });
       }
     });
 
-    obras.forEach((o) => {
+    obrasFiltradas.forEach((o) => {
       if (o.status !== "CONCLUIDA" && o.status !== "CANCELADA" && new Date(o.previsaoTermino) < new Date()) {
         alertList.push({ type: "warning", icon: Clock, message: `${o.nome}: atrasada (previsao: ${new Date(o.previsaoTermino).toLocaleDateString("pt-BR")})` });
       }
     });
 
-    const contasVencidas = lancamentos.filter((l) => l.status === "VENCIDO");
+    const contasVencidas = lancamentosFiltrados.filter((l) => l.status === "VENCIDO");
     if (contasVencidas.length > 0) {
       alertList.push({ type: "error", icon: AlertTriangle, message: `${contasVencidas.length} conta(s) vencida(s) totalizando ${formatCurrency(contasVencidas.reduce((s, l) => s + l.valor, 0))}` });
     }
@@ -152,13 +169,13 @@ export default function DashboardPage() {
       alertList.push({ type: "warning", icon: FileWarning, message: `${eventosVencendo.length} vencimento(s) nos proximos 30 dias` });
     }
 
-    const docsPendentes = lancamentos.filter((l) => l.status === "PENDENTE").length;
+    const docsPendentes = lancamentosFiltrados.filter((l) => l.status === "PENDENTE").length;
     if (docsPendentes > 0) {
       alertList.push({ type: "info", icon: FileText, message: `${docsPendentes} lancamento(s) pendente(s) de confirmacao` });
     }
 
     return alertList;
-  }, [obras, lancamentos, eventos]);
+  }, [obrasFiltradas, lancamentosFiltrados, eventos]);
 
   if (loading) {
     return (
@@ -175,14 +192,26 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Dashboard Executivo" />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <PageHeader title="Dashboard Executivo" />
+        <select
+          value={filtroObra}
+          onChange={(e) => setFiltroObra(e.target.value)}
+          className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="TODOS">Todas as Obras</option>
+          {obras.map((obra) => (
+            <option key={obra.id} value={obra.id}>{obra.nome}</option>
+          ))}
+        </select>
+      </div>
 
       {/* === INDICADORES GERAIS === */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Obras Ativas" value={String(obrasAtivas)} icon={Building2} className="border-l-4 border-l-blue-500" />
         <StatCard title="Obras Concluidas" value={String(obrasConcluidas)} icon={CheckCircle2} className="border-l-4 border-l-green-500" />
         <StatCard title="Obras Atrasadas" value={String(obrasAtrasadas)} icon={AlertTriangle} className={`border-l-4 ${obrasAtrasadas > 0 ? "border-l-red-500" : "border-l-green-500"}`} />
-        <StatCard title="Total de Obras" value={String(obras.length)} icon={Activity} className="border-l-4 border-l-purple-500" />
+        <StatCard title="Total de Obras" value={String(obrasFiltradas.length)} icon={Activity} className="border-l-4 border-l-purple-500" />
       </div>
 
       {/* Financial KPIs */}
