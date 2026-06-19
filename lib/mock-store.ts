@@ -91,3 +91,79 @@ export function rejectAccessRequest(id: string): AccessRequest | null {
   }
   return null;
 }
+
+// ─── Server-side Access Requests (Portuguese model) ───────────────────────────
+
+export interface ServerAccessRequest {
+  id: string;
+  nome: string;
+  email: string;
+  senha: string;
+  telefone: string;
+  empresa: string;
+  cargo: string;
+  mensagem?: string;
+  status: "pendente" | "aprovado" | "rejeitado";
+  dataSolicitacao: string;
+  dataResposta?: string;
+  motivoRejeicao?: string;
+}
+
+let serverAccessRequests: ServerAccessRequest[] = [];
+
+export function getServerAccessRequests(): ServerAccessRequest[] {
+  return serverAccessRequests;
+}
+
+export function addServerAccessRequest(
+  data: Omit<ServerAccessRequest, "id" | "status" | "dataSolicitacao">
+): ServerAccessRequest {
+  const newRequest: ServerAccessRequest = {
+    ...data,
+    id: `req-${Date.now()}`,
+    status: "pendente",
+    dataSolicitacao: new Date().toISOString(),
+  };
+  serverAccessRequests.push(newRequest);
+  return newRequest;
+}
+
+export function approveServerAccessRequest(id: string): ServerAccessRequest | null {
+  const request = serverAccessRequests.find((r) => r.id === id);
+  if (request) {
+    request.status = "aprovado";
+    request.dataResposta = new Date().toISOString();
+    // Register user so they can login
+    registerUser({
+      name: request.nome,
+      email: request.email,
+      password: request.senha,
+      companyName: request.empresa,
+    });
+    return request;
+  }
+  return null;
+}
+
+export function rejectServerAccessRequest(
+  id: string,
+  motivoRejeicao: string
+): ServerAccessRequest | null {
+  const request = serverAccessRequests.find((r) => r.id === id);
+  if (request) {
+    request.status = "rejeitado";
+    request.dataResposta = new Date().toISOString();
+    request.motivoRejeicao = motivoRejeicao;
+    return request;
+  }
+  return null;
+}
+
+export function deleteServerAccessRequest(id: string): boolean {
+  const index = serverAccessRequests.findIndex((r) => r.id === id);
+  if (index !== -1) {
+    serverAccessRequests.splice(index, 1);
+    return true;
+  }
+  return false;
+}

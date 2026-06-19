@@ -991,71 +991,70 @@ function TabSolicitacoes() {
   const [requests, setRequests] = useState<AccessRequestItem[]>([]);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [loadingAction, setLoadingAction] = useState(false);
+
+  async function loadRequests() {
+    try {
+      const res = await fetch("/api/access-requests");
+      if (res.ok) {
+        const data = await res.json();
+        setRequests(data);
+      }
+    } catch {
+      setRequests([]);
+    }
+  }
 
   useEffect(() => {
-    const raw = localStorage.getItem("smart-obra-access-requests");
-    if (raw) {
-      try {
-        setRequests(JSON.parse(raw));
-      } catch {
-        setRequests([]);
-      }
-    }
+    loadRequests();
   }, []);
 
-  function persist(updated: AccessRequestItem[]) {
-    setRequests(updated);
-    localStorage.setItem("smart-obra-access-requests", JSON.stringify(updated));
-  }
-
   async function handleApprove(id: string) {
-    const req = requests.find((r) => r.id === id);
-    if (!req) return;
-
-    // Register user on server so they can login
+    setLoadingAction(true);
     try {
-      await fetch("/api/users/register", {
-        method: "POST",
+      const res = await fetch(`/api/access-requests/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: req.nome,
-          email: req.email,
-          password: req.senha || "123456",
-          companyName: req.empresa,
-        }),
+        body: JSON.stringify({ status: "aprovado" }),
       });
-    } catch (e) {
-      // Continue even if API fails
+      if (res.ok) {
+        showToast("Solicitação aprovada com sucesso! Usuário já pode fazer login.");
+        await loadRequests();
+      } else {
+        showToast("Erro ao aprovar solicitação.", "error");
+      }
+    } catch {
+      showToast("Erro ao aprovar solicitação.", "error");
+    } finally {
+      setLoadingAction(false);
     }
-
-    const updated = requests.map((r) =>
-      r.id === id
-        ? { ...r, status: "aprovado" as const, dataResposta: new Date().toISOString() }
-        : r
-    );
-    persist(updated);
-    showToast("Solicitação aprovada com sucesso! Usuário já pode fazer login.");
   }
 
-  function handleReject(id: string) {
+  async function handleReject(id: string) {
     if (!rejectReason.trim()) {
       showToast("Informe o motivo da rejeição.", "error");
       return;
     }
-    const updated = requests.map((r) =>
-      r.id === id
-        ? {
-            ...r,
-            status: "rejeitado" as const,
-            dataResposta: new Date().toISOString(),
-            motivoRejeicao: rejectReason.trim(),
-          }
-        : r
-    );
-    persist(updated);
-    setRejectingId(null);
-    setRejectReason("");
-    showToast("Solicitação rejeitada.");
+    setLoadingAction(true);
+    try {
+      const res = await fetch(`/api/access-requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejeitado", motivoRejeicao: rejectReason.trim() }),
+      });
+      if (res.ok) {
+        showToast("Solicitação rejeitada.");
+        setRejectingId(null);
+        setRejectReason("");
+        await loadRequests();
+      } else {
+        showToast("Erro ao rejeitar solicitação.", "error");
+      }
+    } catch {
+      showToast("Erro ao rejeitar solicitação.", "error");
+    } finally {
+      setLoadingAction(false);
+    }
   }
 
   function cancelReject() {

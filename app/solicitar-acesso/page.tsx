@@ -20,22 +20,6 @@ const solicitacaoSchema = z.object({
 
 type SolicitacaoForm = z.infer<typeof solicitacaoSchema>;
 
-interface AccessRequest {
-  id: string;
-  nome: string;
-  email: string;
-  senha: string;
-  telefone: string;
-  empresa: string;
-  cargo: string;
-  mensagem?: string;
-  status: "pendente" | "aprovado" | "rejeitado";
-  dataSolicitacao: string;
-  dataResposta?: string;
-  motivoRejeicao?: string;
-}
-
-const STORAGE_KEY = "smart-obra-access-requests";
 
 export default function SolicitarAcessoPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -49,44 +33,34 @@ export default function SolicitarAcessoPage() {
     resolver: zodResolver(solicitacaoSchema),
   });
 
-  const onSubmit = (data: SolicitacaoForm) => {
+  const onSubmit = async (data: SolicitacaoForm) => {
     setLoading(true);
 
-    const newRequest: AccessRequest = {
-      id: `req-${Date.now()}`,
-      nome: data.nome,
-      email: data.email,
-      senha: data.senha,
-      telefone: data.telefone,
-      empresa: data.empresa,
-      cargo: data.cargo,
-      mensagem: data.mensagem || undefined,
-      status: "pendente",
-      dataSolicitacao: new Date().toISOString(),
-    };
+    try {
+      const res = await fetch("/api/access-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: data.nome,
+          email: data.email,
+          senha: data.senha,
+          telefone: data.telefone,
+          empresa: data.empresa,
+          cargo: data.cargo,
+          mensagem: data.mensagem || undefined,
+        }),
+      });
 
-    // Save to localStorage for admin panel
-    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as AccessRequest[];
-    existing.push(newRequest);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+      if (!res.ok) {
+        throw new Error("Erro ao enviar solicitacao");
+      }
 
-    // Also notify server API
-    fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: data.nome,
-        email: data.email,
-        phone: data.telefone,
-        companyName: data.empresa,
-        cnpj: "N/A",
-      }),
-    }).catch(() => {});
-
-    setTimeout(() => {
-      setLoading(false);
       setSubmitted(true);
-    }, 800);
+    } catch {
+      alert("Erro ao enviar solicitacao. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
