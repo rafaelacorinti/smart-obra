@@ -3,6 +3,8 @@ import {
   approveServerAccessRequest,
   rejectServerAccessRequest,
   deleteServerAccessRequest,
+  blockServerAccessRequest,
+  unblockServerAccessRequest,
 } from "@/lib/mock-store";
 
 export async function PATCH(
@@ -42,8 +44,36 @@ export async function PATCH(
       });
     }
 
+    if (status === "bloqueado") {
+      const result = blockServerAccessRequest(id);
+      if (!result) {
+        return NextResponse.json(
+          { error: "Solicitacao nao encontrada" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        message: "Usuario bloqueado com sucesso",
+        request: result,
+      });
+    }
+
+    if (status === "desbloqueado") {
+      const result = unblockServerAccessRequest(id);
+      if (!result) {
+        return NextResponse.json(
+          { error: "Solicitacao nao encontrada" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        message: "Usuario desbloqueado com sucesso",
+        request: result,
+      });
+    }
+
     return NextResponse.json(
-      { error: "Status invalido. Use 'aprovado' ou 'rejeitado'" },
+      { error: "Status invalido. Use 'aprovado', 'rejeitado', 'bloqueado' ou 'desbloqueado'" },
       { status: 400 }
     );
   } catch {

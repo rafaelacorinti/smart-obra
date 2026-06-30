@@ -15,6 +15,8 @@ import {
   Upload,
   CheckCircle2,
   XCircle,
+  Ban,
+  ShieldOff,
   Mail,
   MessageSquare,
   Moon,
@@ -71,7 +73,7 @@ interface AccessRequestItem {
   empresa: string;
   cargo: string;
   mensagem?: string;
-  status: "pendente" | "aprovado" | "rejeitado";
+  status: "pendente" | "aprovado" | "rejeitado" | "bloqueado";
   dataSolicitacao: string;
   dataResposta?: string;
   motivoRejeicao?: string;
@@ -1062,6 +1064,68 @@ function TabSolicitacoes() {
     setRejectReason("");
   }
 
+  async function handleBlock(id: string) {
+    setLoadingAction(true);
+    try {
+      const res = await fetch(`/api/access-requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "bloqueado" }),
+      });
+      if (res.ok) {
+        showToast("Usuario bloqueado com sucesso.");
+        await loadRequests();
+      } else {
+        showToast("Erro ao bloquear usuario.", "error");
+      }
+    } catch {
+      showToast("Erro ao bloquear usuario.", "error");
+    } finally {
+      setLoadingAction(false);
+    }
+  }
+
+  async function handleUnblock(id: string) {
+    setLoadingAction(true);
+    try {
+      const res = await fetch(`/api/access-requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "desbloqueado" }),
+      });
+      if (res.ok) {
+        showToast("Usuario desbloqueado com sucesso.");
+        await loadRequests();
+      } else {
+        showToast("Erro ao desbloquear usuario.", "error");
+      }
+    } catch {
+      showToast("Erro ao desbloquear usuario.", "error");
+    } finally {
+      setLoadingAction(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Tem certeza que deseja excluir esta solicitacao? Esta acao nao pode ser desfeita.")) return;
+    setLoadingAction(true);
+    try {
+      const res = await fetch(`/api/access-requests/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("Solicitacao excluida com sucesso.");
+        await loadRequests();
+      } else {
+        showToast("Erro ao excluir solicitacao.", "error");
+      }
+    } catch {
+      showToast("Erro ao excluir solicitacao.", "error");
+    } finally {
+      setLoadingAction(false);
+    }
+  }
+
   const pending = requests.filter((r) => r.status === "pendente");
   const processed = requests.filter((r) => r.status !== "pendente");
 
@@ -1071,8 +1135,19 @@ function TabSolicitacoes() {
         return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800";
       case "rejeitado":
         return "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800";
+      case "bloqueado":
+        return "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800";
       default:
         return "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800";
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "aprovado": return "Aprovado";
+      case "rejeitado": return "Rejeitado";
+      case "bloqueado": return "Bloqueado";
+      default: return "Pendente";
     }
   };
 
@@ -1154,6 +1229,14 @@ function TabSolicitacoes() {
                           <XCircle className="h-3.5 w-3.5" />
                           Rejeitar
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(req.id)}
+                          className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </>
                     )}
                   </div>
@@ -1183,7 +1266,7 @@ function TabSolicitacoes() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm">{req.nome}</span>
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusBadge(req.status)}`}>
-                      {req.status === "aprovado" ? "Aprovado" : "Rejeitado"}
+                      {statusLabel(req.status)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -1195,7 +1278,40 @@ function TabSolicitacoes() {
                     </p>
                   )}
                 </div>
-                <div className="text-right shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  {req.status === "aprovado" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleBlock(req.id)}
+                      disabled={loadingAction}
+                      className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                    >
+                      <Ban className="h-3.5 w-3.5" />
+                      Bloquear
+                    </Button>
+                  )}
+                  {req.status === "bloqueado" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleUnblock(req.id)}
+                      disabled={loadingAction}
+                      className="gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                    >
+                      <ShieldOff className="h-3.5 w-3.5" />
+                      Desbloquear
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(req.id)}
+                    disabled={loadingAction}
+                    className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                   <p className="text-[11px] text-muted-foreground">
                     {req.dataResposta &&
                       new Date(req.dataResposta).toLocaleDateString("pt-BR")}

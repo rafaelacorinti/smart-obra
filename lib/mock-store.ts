@@ -103,7 +103,7 @@ export interface ServerAccessRequest {
   empresa: string;
   cargo: string;
   mensagem?: string;
-  status: "pendente" | "aprovado" | "rejeitado";
+  status: "pendente" | "aprovado" | "rejeitado" | "bloqueado";
   dataSolicitacao: string;
   dataResposta?: string;
   motivoRejeicao?: string;
@@ -166,4 +166,34 @@ export function deleteServerAccessRequest(id: string): boolean {
     return true;
   }
   return false;
+}
+
+export function blockServerAccessRequest(id: string): ServerAccessRequest | null {
+  const request = serverAccessRequests.find((r) => r.id === id);
+  if (request) {
+    request.status = "bloqueado";
+    request.dataResposta = new Date().toISOString();
+    // Deactivate the registered user so they cannot login
+    const user = registeredUsers.find((u) => u.email === request.email);
+    if (user) {
+      user.active = false;
+    }
+    return request;
+  }
+  return null;
+}
+
+export function unblockServerAccessRequest(id: string): ServerAccessRequest | null {
+  const request = serverAccessRequests.find((r) => r.id === id);
+  if (request) {
+    request.status = "aprovado";
+    request.dataResposta = new Date().toISOString();
+    // Reactivate the registered user
+    const user = registeredUsers.find((u) => u.email === request.email);
+    if (user) {
+      user.active = true;
+    }
+    return request;
+  }
+  return null;
 }
