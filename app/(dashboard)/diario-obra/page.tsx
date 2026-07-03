@@ -5,6 +5,7 @@ import { BookOpen, Plus, Sun, Cloud, CloudRain, CloudSun, ChevronDown, ChevronUp
 import { PageHeader } from "@/components/ui/page-header";
 import { useObras } from "@/hooks/use-storage-data";
 import { generateId } from "@/lib/storage";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 interface RegistroDiario {
   id: string;
@@ -24,8 +25,27 @@ const STORAGE_KEY = "smart-obra-diario";
 
 function getDiarioStorage(): RegistroDiario[] {
   if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item: any) => ({
+      id: item.id ?? "",
+      obraId: item.obraId ?? "",
+      data: item.data ?? "",
+      equipePresenteNumero: item.equipePresenteNumero ?? 0,
+      equipeNomes: item.equipeNomes ?? "",
+      atividadesExecutadas: item.atividadesExecutadas ?? item.descricao ?? "",
+      ocorrencias: item.ocorrencias ?? "",
+      clima: item.clima ?? "ENSOLARADO",
+      fotos: Array.isArray(item.fotos) ? item.fotos : [],
+      videos: Array.isArray(item.videos) ? item.videos : [],
+      criadoEm: item.criadoEm ?? "",
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function setDiarioStorage(registros: RegistroDiario[]): void {
@@ -159,6 +179,7 @@ export default function DiarioObraPage() {
   }
 
   return (
+    <ErrorBoundary>
     <div>
       <PageHeader
         title="Diario de Obra"
@@ -333,5 +354,6 @@ export default function DiarioObraPage() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }

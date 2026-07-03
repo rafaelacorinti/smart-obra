@@ -9,8 +9,14 @@ export class StorageService<T extends { id: string }> {
 
   private getStorage(): T[] {
     if (typeof window === "undefined") return [];
-    const data = localStorage.getItem(this.key);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(this.key);
+      if (!data) return [];
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 
   private setStorage(data: T[]): void {
