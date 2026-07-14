@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, FileText, Trash2, FileCode2 } from "lucide-react";
+import { Plus, Search, FileText, Trash2, FileCode2, Ruler } from "lucide-react";
 import { useOrcamentos, useObras } from "@/hooks/use-storage-data";
 import { generateId } from "@/lib/storage";
 
