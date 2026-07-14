@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -89,6 +89,13 @@ export default function OrcamentosPage() {
             Analisar Projeto (CAD)
           </Link>
           <Link
+            href="/orcamentos/quantitativos-dxf"
+            className="inline-flex items-center gap-2 rounded-lg border-2 border-emerald-600 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-100 transition-colors dark:border-emerald-500 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+          >
+            <Ruler className="h-4 w-4" />
+            Quantitativos DXF
+          </Link>
+          <Link
             href={`/orcamentos/${generateId()}`}
             onClick={handleNovoOrcamento}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors"
@@ -112,6 +119,24 @@ export default function OrcamentosPage() {
             <h3 className="font-semibold text-gray-900 dark:text-white">Analise de Projeto CAD</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Faca upload de arquivos DWG, DXF ou IFC para levantamento automatico de quantitativos e geracao de orcamento
+            </p>
+          </div>
+        </div>
+      </Link>
+
+      {/* DXF Quantitativos Card */}
+      <Link
+        href="/orcamentos/quantitativos-dxf"
+        className="block rounded-xl border-2 border-dashed border-emerald-300 bg-gradient-to-r from-emerald-50 to-green-50 p-5 hover:border-emerald-400 hover:shadow-md transition-all dark:border-emerald-700 dark:from-emerald-900/20 dark:to-green-900/20 dark:hover:border-emerald-600"
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
+            <Ruler className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white">Quantitativos DXF</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Extraia quantitativos reais de arquivos DXF por camadas (paredes, esquadrias, pisos, hidrossanitario, estrutura) e importe direto para o orcamento
             </p>
           </div>
         </div>
