@@ -34,8 +34,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
-import { categoriasFinanceiras } from "@/lib/mock-data";
 import { ALL_MODULES } from "@/lib/module-permissions";
+
+const defaultCategoriasFinanceiras = {
+  receita: ["Medicao", "Aditivo", "Reembolso", "Venda material", "Consultoria", "Entrada", "Outros"],
+  despesa: ["Material", "Mao de obra", "Equipamento", "Combustivel", "Alimentacao", "Transporte", "Impostos", "Aluguel", "Manutencao", "Administrativo", "Projeto", "Topografia", "Outros"],
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -489,8 +493,8 @@ function TabCategorias() {
       setReceitas(saved.receita);
       setDespesas(saved.despesa);
     } else {
-      setReceitas(categoriasFinanceiras.receita);
-      setDespesas(categoriasFinanceiras.despesa);
+      setReceitas(defaultCategoriasFinanceiras.receita);
+      setDespesas(defaultCategoriasFinanceiras.despesa);
     }
   }, []);
 

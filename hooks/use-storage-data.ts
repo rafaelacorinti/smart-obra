@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { StorageService, generateId } from "@/lib/storage";
@@ -9,14 +9,6 @@ import {
   DocumentoColaborador, MaterialEstoque, MovimentacaoEstoque, Fornecedor,
   Veiculo, ManutencaoVeiculo, AbastecimentoVeiculo, DocumentoVeiculo,
   Orcamento, Cliente, DocumentoCliente,
-  obrasIniciais, lancamentosIniciais, ordensServicoIniciais,
-  colaboradoresIniciais, colaboradoresObraIniciais, materiaisObraIniciais,
-  diarioObraIniciais, timelineObraIniciais, documentosObraIniciais,
-  eventosCalendarioIniciais, fotosObraIniciais, presencasIniciais,
-  pagamentosIniciais, documentosColaboradorIniciais, materiaisEstoqueIniciais,
-  movimentacoesIniciais, fornecedoresIniciais, veiculosIniciais,
-  manutencoesVeiculoIniciais, abastecimentosVeiculoIniciais,
-  documentosVeiculoIniciais, clientesIniciais, documentosClienteIniciais,
 } from "@/lib/mock-data";
 
 // Storage instances
@@ -45,38 +37,11 @@ const orcamentosStorage = new StorageService<Orcamento>("smart-obra-orcamentos")
 const clientesStorage = new StorageService<Cliente>("smart-obra-clientes");
 const documentosClienteStorage = new StorageService<DocumentoCliente>("smart-obra-documentos-cliente");
 
-function initializeData() {
-  obrasStorage.seed(obrasIniciais);
-  lancamentosStorage.seed(lancamentosIniciais);
-  ordensStorage.seed(ordensServicoIniciais);
-  colaboradoresStorage.seed(colaboradoresIniciais);
-  colaboradoresObraStorage.seed(colaboradoresObraIniciais);
-  materiaisObraStorage.seed(materiaisObraIniciais);
-  diarioStorage.seed(diarioObraIniciais);
-  timelineStorage.seed(timelineObraIniciais);
-  documentosStorage.seed(documentosObraIniciais);
-  eventosStorage.seed(eventosCalendarioIniciais);
-  fotosStorage.seed(fotosObraIniciais);
-  presencasStorage.seed(presencasIniciais);
-  pagamentosColabStorage.seed(pagamentosIniciais);
-  documentosColabStorage.seed(documentosColaboradorIniciais);
-  materiaisEstoqueStorage.seed(materiaisEstoqueIniciais);
-  movimentacoesStorage.seed(movimentacoesIniciais);
-  fornecedoresStorage.seed(fornecedoresIniciais);
-  veiculosStorage.seed(veiculosIniciais);
-  manutencoesVeiculoStorage.seed(manutencoesVeiculoIniciais);
-  abastecimentosVeiculoStorage.seed(abastecimentosVeiculoIniciais);
-  documentosVeiculoStorage.seed(documentosVeiculoIniciais);
-  clientesStorage.seed(clientesIniciais);
-  documentosClienteStorage.seed(documentosClienteIniciais);
-}
-
 export function useObras() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setObras(obrasStorage.getAll());
     setLoading(false);
   }, []);
@@ -150,7 +115,6 @@ export function useLancamentos(obraId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = lancamentosStorage.getAll();
     setLancamentos(obraId ? all.filter((l) => l.obraId === obraId) : all);
     setLoading(false);
@@ -186,7 +150,6 @@ export function useOrdensServico() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setOrdens(ordensStorage.getAll());
     setLoading(false);
   }, []);
@@ -220,7 +183,6 @@ export function useColaboradores() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setColaboradores(colaboradoresStorage.getAll());
     setLoading(false);
   }, []);
@@ -254,7 +216,6 @@ export function usePresencas(colaboradorId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = presencasStorage.getAll();
     setPresencas(colaboradorId ? all.filter((p) => p.colaboradorId === colaboradorId) : all);
     setLoading(false);
@@ -280,7 +241,6 @@ export function usePagamentosColaborador(colaboradorId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = pagamentosColabStorage.getAll();
     setPagamentos(colaboradorId ? all.filter((p) => p.colaboradorId === colaboradorId) : all);
     setLoading(false);
@@ -311,7 +271,6 @@ export function useDocumentosColaborador(colaboradorId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = documentosColabStorage.getAll();
     setDocumentos(colaboradorId ? all.filter((d) => d.colaboradorId === colaboradorId) : all);
     setLoading(false);
@@ -337,7 +296,6 @@ export function useMateriaisEstoque() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setMateriais(materiaisEstoqueStorage.getAll());
     setLoading(false);
   }, []);
@@ -371,7 +329,6 @@ export function useMovimentacoes() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setMovimentacoes(movimentacoesStorage.getAll());
     setLoading(false);
   }, []);
@@ -395,7 +352,6 @@ export function useFornecedores() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setFornecedores(fornecedoresStorage.getAll());
     setLoading(false);
   }, []);
@@ -429,7 +385,6 @@ export function useColaboradoresObra(obraId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setColaboradores(colaboradoresObraStorage.getAll().filter((c) => c.obraId === obraId));
     setLoading(false);
   }, [obraId]);
@@ -457,7 +412,6 @@ export function useMateriaisObra(obraId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setMateriais(materiaisObraStorage.getAll().filter((m) => m.obraId === obraId));
     setLoading(false);
   }, [obraId]);
@@ -480,7 +434,6 @@ export function useDiarioObra(obraId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setEntradas(diarioStorage.getAll().filter((d) => d.obraId === obraId).sort((a, b) => b.data.localeCompare(a.data)));
     setLoading(false);
   }, [obraId]);
@@ -503,7 +456,6 @@ export function useTimelineObra(obraId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setEventos(timelineStorage.getAll().filter((t) => t.obraId === obraId).sort((a, b) => b.data.localeCompare(a.data)));
     setLoading(false);
   }, [obraId]);
@@ -526,7 +478,6 @@ export function useDocumentosObra(obraId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setDocumentos(documentosStorage.getAll().filter((d) => d.obraId === obraId));
     setLoading(false);
   }, [obraId]);
@@ -549,7 +500,6 @@ export function useFotosObra(obraId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setFotos(fotosStorage.getAll().filter((f) => f.obraId === obraId));
     setLoading(false);
   }, [obraId]);
@@ -572,7 +522,6 @@ export function useEventosCalendario() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setEventos(eventosStorage.getAll());
     setLoading(false);
   }, []);
@@ -585,7 +534,6 @@ export function useVeiculos() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setVeiculos(veiculosStorage.getAll());
     setLoading(false);
   }, []);
@@ -619,7 +567,6 @@ export function useManutencoesVeiculo(veiculoId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = manutencoesVeiculoStorage.getAll();
     setManutencoes(veiculoId ? all.filter((m) => m.veiculoId === veiculoId) : all);
     setLoading(false);
@@ -645,7 +592,6 @@ export function useAbastecimentosVeiculo(veiculoId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = abastecimentosVeiculoStorage.getAll();
     setAbastecimentos(veiculoId ? all.filter((a) => a.veiculoId === veiculoId) : all);
     setLoading(false);
@@ -671,7 +617,6 @@ export function useDocumentosVeiculo(veiculoId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = documentosVeiculoStorage.getAll();
     setDocumentos(veiculoId ? all.filter((d) => d.veiculoId === veiculoId) : all);
     setLoading(false);
@@ -697,7 +642,6 @@ export function useClientes() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     setClientes(clientesStorage.getAll());
     setLoading(false);
   }, []);
@@ -731,7 +675,6 @@ export function useDocumentosCliente(clienteId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    initializeData();
     const all = documentosClienteStorage.getAll();
     setDocumentos(clienteId ? all.filter((d) => d.clienteId === clienteId) : all);
     setLoading(false);

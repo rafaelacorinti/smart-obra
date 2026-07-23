@@ -32,8 +32,6 @@ interface EtapaCronograma {
 }
 
 const STORAGE_KEY = "smart-obra-cronograma";
-const ETAPAS_PADRAO = ["Fundacao", "Estrutura", "Cobertura", "Instalacoes", "Acabamentos"];
-
 function getStorage(): EtapaCronograma[] {
   if (typeof window === "undefined") return [];
   const data = localStorage.getItem(STORAGE_KEY);
@@ -45,37 +43,6 @@ function setStorageData(etapas: EtapaCronograma[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(etapas));
 }
 
-function seedEtapas(obraId: string): EtapaCronograma[] {
-  const existing = getStorage();
-  const obraEtapas = existing.filter((e) => e.obraId === obraId);
-  if (obraEtapas.length > 0) return existing;
-
-  const baseDate = new Date();
-  const newEtapas: EtapaCronograma[] = ETAPAS_PADRAO.map((nome, idx) => {
-    const dataPrevista = new Date(baseDate);
-    dataPrevista.setDate(dataPrevista.getDate() + idx * 30);
-    const dataRealizada = idx < 2 ? new Date(dataPrevista) : new Date(0);
-    if (idx < 2) dataRealizada.setDate(dataRealizada.getDate() + Math.floor(Math.random() * 7));
-    return {
-      id: generateId(),
-      obraId,
-      nome,
-      dataPrevista: dataPrevista.toISOString().split("T")[0],
-      dataRealizada: idx < 2 ? dataRealizada.toISOString().split("T")[0] : "",
-      percentualConcluido: idx === 0 ? 100 : idx === 1 ? 65 : idx === 2 ? 20 : 0,
-      valorPlanejado: [80000, 150000, 60000, 90000, 120000][idx],
-      valorRealizado: idx === 0 ? 82000 : idx === 1 ? 98000 : idx === 2 ? 12000 : 0,
-      status: (idx === 0 ? "CONCLUIDA" : idx === 1 ? "EM_ANDAMENTO" : idx === 2 ? "EM_ANDAMENTO" : "NAO_INICIADA") as EtapaCronograma["status"],
-      ordem: idx,
-    };
-  });
-  for (let i = 1; i < newEtapas.length; i++) {
-    newEtapas[i].dependeDe = newEtapas[i - 1].id;
-  }
-  const allEtapas = [...existing, ...newEtapas];
-  setStorageData(allEtapas);
-  return allEtapas;
-}
 
 function GanttChart({ etapas, obraInicio }: { etapas: EtapaCronograma[]; obraInicio: string }) {
   const today = new Date();
@@ -225,7 +192,7 @@ export default function CronogramaPage() {
 
   useEffect(() => {
     if (selectedObraId) {
-      const allEtapas = seedEtapas(selectedObraId);
+      const allEtapas = getStorage();
       setEtapas(allEtapas.filter((e) => e.obraId === selectedObraId).sort((a, b) => a.ordem - b.ordem));
     }
   }, [selectedObraId]);
