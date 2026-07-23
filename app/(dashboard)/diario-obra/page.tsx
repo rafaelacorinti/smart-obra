@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { useObras } from "@/hooks/use-storage-data";
 import { generateId } from "@/lib/storage";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { ModuleGuard } from "@/components/module-guard";
 
 interface RegistroDiario {
   id: string;
@@ -179,6 +180,7 @@ export default function DiarioObraPage() {
   }
 
   return (
+    <ModuleGuard moduleId="diario-obra" moduleName="Diario de Obra">
     <ErrorBoundary>
     <div>
       <PageHeader
@@ -355,5 +357,6 @@ export default function DiarioObraPage() {
       )}
     </div>
     </ErrorBoundary>
+    </ModuleGuard>
   );
 }

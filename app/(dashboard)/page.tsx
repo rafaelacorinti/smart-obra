@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useObras, useLancamentos, useOrdensServico, useEventosCalendario } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
+import { ModuleGuard } from "@/components/module-guard";
 
 const COLORS = ["#1e40af", "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 
@@ -191,6 +192,7 @@ export default function DashboardPage() {
   }
 
   return (
+    <ModuleGuard moduleId="dashboard" moduleName="Dashboard">
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader title="Dashboard Executivo" />
@@ -386,5 +388,6 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+    </ModuleGuard>
   );
 }

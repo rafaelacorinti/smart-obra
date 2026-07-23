@@ -34,6 +34,7 @@ import {
 
 import { useLancamentos } from "@/hooks/use-storage-data";
 import { useObras } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { categoriasFinanceiras, LancamentoFinanceiro } from "@/lib/mock-data";
 import { generateId } from "@/lib/storage";
 
@@ -455,6 +456,7 @@ export default function FinanceiroPage() {
   );
 
   return (
+    <ModuleGuard moduleId="financeiro" moduleName="Financeiro">
     <div>
       <PageHeader
         title="Financeiro"
@@ -989,5 +991,6 @@ export default function FinanceiroPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </ModuleGuard>
   );
 }

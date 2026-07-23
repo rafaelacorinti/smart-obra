@@ -29,6 +29,7 @@ import {
 import {
   useMateriaisEstoque, useMovimentacoes, useFornecedores, useObras,
 } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { MaterialEstoque, MovimentacaoEstoque, Fornecedor } from "@/lib/mock-data";
 
 function fmt(value: number) {
@@ -286,6 +287,7 @@ export default function EstoquePage() {
   }
 
   return (
+    <ModuleGuard moduleId="estoque" moduleName="Estoque">
     <div>
       <PageHeader
         title="Estoque"
@@ -640,5 +642,6 @@ export default function EstoquePage() {
         </DialogContent>
       </Dialog>
     </div>
+    </ModuleGuard>
   );
 }

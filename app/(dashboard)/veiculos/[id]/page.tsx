@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { useVeiculos, useManutencoesVeiculo, useAbastecimentosVeiculo, useDocumentosVeiculo } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { ManutencaoVeiculo, AbastecimentoVeiculo, DocumentoVeiculo } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Truck, Wrench, Fuel, FileText, DollarSign, AlertTriangle, Plus, Calendar } from "lucide-react";
@@ -115,6 +116,7 @@ export default function VeiculoDetalhesPage() {
   };
 
   return (
+    <ModuleGuard moduleId="veiculos" moduleName="Veiculos">
     <div>
       <PageHeader
         title={veiculo.nome}
@@ -495,5 +497,6 @@ export default function VeiculoDetalhesPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </ModuleGuard>
   );
 }

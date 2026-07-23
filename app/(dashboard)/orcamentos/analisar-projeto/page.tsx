@@ -12,6 +12,7 @@ import { analyzeProject, gerarCapitulosOrcamento, ConfigAnalise, AnaliseResultad
 import { analyzeDxfFile } from "@/lib/dxf-parser";
 import { analyzeIfcFile } from "@/lib/ifc-analyzer";
 import { useOrcamentos } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { generateId } from "@/lib/storage";
 
 const UFS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
@@ -233,6 +234,7 @@ export default function AnalisarProjetoPage() {
   };
 
   return (
+    <ModuleGuard moduleId="orcamentos" moduleName="Orcamentos">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -666,5 +668,6 @@ export default function AnalisarProjetoPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useObras, useClientes } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { ModuleGuard } from "@/components/module-guard";
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   PLANEJAMENTO: { label: "Planejamento", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
@@ -49,6 +50,7 @@ export default function ObrasPage() {
   }
 
   return (
+    <ModuleGuard moduleId="obras" moduleName="Obras">
     <div>
       <PageHeader
         title="Obras"
@@ -202,5 +204,6 @@ export default function ObrasPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, Search, FileText, Trash2, FileCode2, Ruler } from "lucide-react";
 import { useOrcamentos, useObras } from "@/hooks/use-storage-data";
 import { generateId } from "@/lib/storage";
+import { ModuleGuard } from "@/components/module-guard";
 
 export default function OrcamentosPage() {
   const { orcamentos, deleteOrcamento, createOrcamento } = useOrcamentos();
@@ -70,6 +71,7 @@ export default function OrcamentosPage() {
   };
 
   return (
+    <ModuleGuard moduleId="orcamentos" moduleName="Orcamentos">
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -257,5 +259,6 @@ export default function OrcamentosPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

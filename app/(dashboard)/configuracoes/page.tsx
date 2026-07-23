@@ -24,6 +24,8 @@ import {
   UserPlus,
   Clock,
   Bell,
+  Lock,
+  Shield,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -33,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
 import { categoriasFinanceiras } from "@/lib/mock-data";
+import { ALL_MODULES } from "@/lib/module-permissions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -989,11 +992,68 @@ function TabAparencia() {
 
 // ─── Tab: Solicitacoes ────────────────────────────────────────────────────────
 
+function ModuleCheckboxes({
+  selectedModules,
+  onToggle,
+  onToggleAll,
+}: {
+  selectedModules: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleAll: () => void;
+}) {
+  const allSelected = ALL_MODULES.every((m) => selectedModules.has(m.id));
+
+  return (
+    <div className="mt-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium flex items-center gap-1.5">
+          <Shield className="h-4 w-4 text-primary" />
+          Permissoes de Acesso
+        </p>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={onToggleAll}
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <span className="text-sm font-medium">Acesso Total</span>
+        </label>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {ALL_MODULES.map((mod) => (
+          <label
+            key={mod.id}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer transition-colors ${
+              selectedModules.has(mod.id)
+                ? "border-primary/40 bg-primary/5"
+                : "border-border hover:bg-muted/50"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={selectedModules.has(mod.id)}
+              onChange={() => onToggle(mod.id)}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span className="truncate">{mod.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TabSolicitacoes() {
   const [requests, setRequests] = useState<AccessRequestItem[]>([]);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [loadingAction, setLoadingAction] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
+  const [editingPermissionsEmail, setEditingPermissionsEmail] = useState<string | null>(null);
+  const [editingPermissionsModules, setEditingPermissionsModules] = useState<Set<string>>(new Set());
+  const [editingPermissionsLoading, setEditingPermissionsLoading] = useState(false);
 
   async function loadRequests() {
     try {
@@ -1011,22 +1071,53 @@ function TabSolicitacoes() {
     loadRequests();
   }, []);
 
-  async function handleApprove(id: string) {
+  function startApproving(id: string) {
+    setApprovingId(id);
+    setSelectedModules(new Set(ALL_MODULES.map((m) => m.id)));
+  }
+
+  function toggleModule(id: string) {
+    setSelectedModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleAllModules() {
+    const allSelected = ALL_MODULES.every((m) => selectedModules.has(m.id));
+    if (allSelected) {
+      setSelectedModules(new Set());
+    } else {
+      setSelectedModules(new Set(ALL_MODULES.map((m) => m.id)));
+    }
+  }
+
+  async function confirmApprove(id: string) {
     setLoadingAction(true);
     try {
       const res = await fetch(`/api/access-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "aprovado" }),
+        body: JSON.stringify({
+          status: "aprovado",
+          allowedModules: Array.from(selectedModules),
+        }),
       });
       if (res.ok) {
-        showToast("Solicitação aprovada com sucesso! Usuário já pode fazer login.");
+        showToast("Solicitacao aprovada com sucesso! Usuario ja pode fazer login.");
+        setApprovingId(null);
+        setSelectedModules(new Set());
         await loadRequests();
       } else {
-        showToast("Erro ao aprovar solicitação.", "error");
+        showToast("Erro ao aprovar solicitacao.", "error");
       }
     } catch {
-      showToast("Erro ao aprovar solicitação.", "error");
+      showToast("Erro ao aprovar solicitacao.", "error");
     } finally {
       setLoadingAction(false);
     }
@@ -1034,7 +1125,7 @@ function TabSolicitacoes() {
 
   async function handleReject(id: string) {
     if (!rejectReason.trim()) {
-      showToast("Informe o motivo da rejeição.", "error");
+      showToast("Informe o motivo da rejeicao.", "error");
       return;
     }
     setLoadingAction(true);
@@ -1045,15 +1136,15 @@ function TabSolicitacoes() {
         body: JSON.stringify({ status: "rejeitado", motivoRejeicao: rejectReason.trim() }),
       });
       if (res.ok) {
-        showToast("Solicitação rejeitada.");
+        showToast("Solicitacao rejeitada.");
         setRejectingId(null);
         setRejectReason("");
         await loadRequests();
       } else {
-        showToast("Erro ao rejeitar solicitação.", "error");
+        showToast("Erro ao rejeitar solicitacao.", "error");
       }
     } catch {
-      showToast("Erro ao rejeitar solicitação.", "error");
+      showToast("Erro ao rejeitar solicitacao.", "error");
     } finally {
       setLoadingAction(false);
     }
@@ -1062,6 +1153,11 @@ function TabSolicitacoes() {
   function cancelReject() {
     setRejectingId(null);
     setRejectReason("");
+  }
+
+  function cancelApprove() {
+    setApprovingId(null);
+    setSelectedModules(new Set());
   }
 
   async function handleBlock(id: string) {
@@ -1123,6 +1219,74 @@ function TabSolicitacoes() {
       showToast("Erro ao excluir solicitacao.", "error");
     } finally {
       setLoadingAction(false);
+    }
+  }
+
+  async function openEditPermissions(email: string) {
+    setEditingPermissionsEmail(email);
+    setEditingPermissionsLoading(true);
+    try {
+      const res = await fetch(`/api/user-permissions?email=${encodeURIComponent(email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.allowedModules) {
+          setEditingPermissionsModules(new Set(data.allowedModules));
+        } else {
+          setEditingPermissionsModules(new Set(ALL_MODULES.map((m) => m.id)));
+        }
+      } else {
+        setEditingPermissionsModules(new Set(ALL_MODULES.map((m) => m.id)));
+      }
+    } catch {
+      setEditingPermissionsModules(new Set(ALL_MODULES.map((m) => m.id)));
+    } finally {
+      setEditingPermissionsLoading(false);
+    }
+  }
+
+  function toggleEditModule(id: string) {
+    setEditingPermissionsModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleAllEditModules() {
+    const allSelected = ALL_MODULES.every((m) => editingPermissionsModules.has(m.id));
+    if (allSelected) {
+      setEditingPermissionsModules(new Set());
+    } else {
+      setEditingPermissionsModules(new Set(ALL_MODULES.map((m) => m.id)));
+    }
+  }
+
+  async function saveEditPermissions() {
+    if (!editingPermissionsEmail) return;
+    setEditingPermissionsLoading(true);
+    try {
+      const res = await fetch("/api/user-permissions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: editingPermissionsEmail,
+          allowedModules: Array.from(editingPermissionsModules),
+        }),
+      });
+      if (res.ok) {
+        showToast("Permissoes atualizadas com sucesso!");
+        setEditingPermissionsEmail(null);
+      } else {
+        showToast("Erro ao atualizar permissoes.", "error");
+      }
+    } catch {
+      showToast("Erro ao atualizar permissoes.", "error");
+    } finally {
+      setEditingPermissionsLoading(false);
     }
   }
 
@@ -1198,7 +1362,7 @@ function TabSolicitacoes() {
                         <Input
                           value={rejectReason}
                           onChange={(e) => setRejectReason(e.target.value)}
-                          placeholder="Motivo da rejeição..."
+                          placeholder="Motivo da rejeicao..."
                           className="text-sm"
                         />
                         <div className="flex gap-2">
@@ -1210,11 +1374,26 @@ function TabSolicitacoes() {
                           </Button>
                         </div>
                       </div>
+                    ) : approvingId === req.id ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => confirmApprove(req.id)}
+                          disabled={loadingAction || selectedModules.size === 0}
+                          className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Confirmar Aprovacao
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelApprove}>
+                          Cancelar
+                        </Button>
+                      </div>
                     ) : (
                       <>
                         <Button
                           size="sm"
-                          onClick={() => handleApprove(req.id)}
+                          onClick={() => startApproving(req.id)}
                           className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
@@ -1241,6 +1420,13 @@ function TabSolicitacoes() {
                     )}
                   </div>
                 </div>
+                {approvingId === req.id && (
+                  <ModuleCheckboxes
+                    selectedModules={selectedModules}
+                    onToggle={toggleModule}
+                    onToggleAll={toggleAllModules}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -1250,15 +1436,15 @@ function TabSolicitacoes() {
       {pending.length === 0 && (
         <SectionCard className="text-center py-8">
           <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500 mb-3" />
-          <p className="font-medium">Nenhuma solicitação pendente</p>
-          <p className="text-sm text-muted-foreground mt-1">Todas as solicitações foram processadas.</p>
+          <p className="font-medium">Nenhuma solicitacao pendente</p>
+          <p className="text-sm text-muted-foreground mt-1">Todas as solicitacoes foram processadas.</p>
         </SectionCard>
       )}
 
       {/* Processed Requests */}
       {processed.length > 0 && (
         <SectionCard>
-          <SectionTitle icon={UserPlus} title="Histórico de Solicitações" />
+          <SectionTitle icon={UserPlus} title="Historico de Solicitacoes" />
           <div className="divide-y">
             {processed.map((req) => (
               <div key={req.id} className="flex items-center justify-between py-3 gap-4">
@@ -1280,16 +1466,28 @@ function TabSolicitacoes() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {req.status === "aprovado" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleBlock(req.id)}
-                      disabled={loadingAction}
-                      className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                    >
-                      <Ban className="h-3.5 w-3.5" />
-                      Bloquear
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditPermissions(req.email)}
+                        disabled={loadingAction}
+                        className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                        Permissoes
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleBlock(req.id)}
+                        disabled={loadingAction}
+                        className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                        Bloquear
+                      </Button>
+                    </>
                   )}
                   {req.status === "bloqueado" && (
                     <Button
@@ -1321,6 +1519,42 @@ function TabSolicitacoes() {
             ))}
           </div>
         </SectionCard>
+      )}
+
+      {/* Edit Permissions Modal */}
+      {editingPermissionsEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-card border shadow-xl p-6 space-y-4">
+            <h3 className="font-semibold text-base flex items-center gap-2">
+              <Lock className="h-4 w-4 text-primary" />
+              Editar Permissoes - {editingPermissionsEmail}
+            </h3>
+            {editingPermissionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : (
+              <ModuleCheckboxes
+                selectedModules={editingPermissionsModules}
+                onToggle={toggleEditModule}
+                onToggleAll={toggleAllEditModules}
+              />
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setEditingPermissionsEmail(null)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={saveEditPermissions}
+                disabled={editingPermissionsLoading}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Salvar Permissoes
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

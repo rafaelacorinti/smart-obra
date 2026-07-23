@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Upload, X, ChevronLeft, ChevronRight, Camera, Calendar, Smartphone, Columns2 } from "lucide-react";
 import { useObras } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { generateId } from "@/lib/storage";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -112,6 +113,7 @@ export default function GaleriaPage() {
   const obraNome = (obraId: string) => obras.find((o) => o.id === obraId)?.nome || "Obra";
 
   return (
+    <ModuleGuard moduleId="galeria" moduleName="Galeria">
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -281,5 +283,6 @@ export default function GaleriaPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

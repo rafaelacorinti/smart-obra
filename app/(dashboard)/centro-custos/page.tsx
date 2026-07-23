@@ -13,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useObras } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
+import { syncAll } from "@/lib/sync-modules";
+import { ModuleGuard } from "@/components/module-guard";
 
 const COLORS = ["#1e40af", "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 
@@ -46,76 +48,7 @@ function getInitialData(): { centros: CentroCustoItem[]; despesas: DespesaDetalh
   if (raw) {
     try { return JSON.parse(raw); } catch { /* fall through */ }
   }
-
-  const centros: CentroCustoItem[] = [
-    { obraId: "obra-1", centro: "Fundacao", orcado: 67500, realizado: 65000 },
-    { obraId: "obra-1", centro: "Estrutura", orcado: 112500, realizado: 118000 },
-    { obraId: "obra-1", centro: "Alvenaria", orcado: 56250, realizado: 52000 },
-    { obraId: "obra-1", centro: "Cobertura", orcado: 45000, realizado: 28000 },
-    { obraId: "obra-1", centro: "Hidraulica", orcado: 33750, realizado: 31500 },
-    { obraId: "obra-1", centro: "Eletrica", orcado: 33750, realizado: 38000 },
-    { obraId: "obra-1", centro: "Acabamentos", orcado: 56250, realizado: 22000 },
-    { obraId: "obra-1", centro: "Paisagismo", orcado: 22500, realizado: 0 },
-    { obraId: "obra-1", centro: "Administracao", orcado: 22500, realizado: 18500 },
-    { obraId: "obra-2", centro: "Fundacao", orcado: 180000, realizado: 175000 },
-    { obraId: "obra-2", centro: "Estrutura", orcado: 360000, realizado: 380000 },
-    { obraId: "obra-2", centro: "Alvenaria", orcado: 120000, realizado: 45000 },
-    { obraId: "obra-2", centro: "Cobertura", orcado: 96000, realizado: 0 },
-    { obraId: "obra-2", centro: "Hidraulica", orcado: 84000, realizado: 25000 },
-    { obraId: "obra-2", centro: "Eletrica", orcado: 84000, realizado: 30000 },
-    { obraId: "obra-2", centro: "Acabamentos", orcado: 144000, realizado: 0 },
-    { obraId: "obra-2", centro: "Paisagismo", orcado: 48000, realizado: 0 },
-    { obraId: "obra-2", centro: "Administracao", orcado: 84000, realizado: 58000 },
-    { obraId: "obra-3", centro: "Fundacao", orcado: 0, realizado: 0 },
-    { obraId: "obra-3", centro: "Estrutura", orcado: 8500, realizado: 8500 },
-    { obraId: "obra-3", centro: "Alvenaria", orcado: 12750, realizado: 12000 },
-    { obraId: "obra-3", centro: "Cobertura", orcado: 0, realizado: 0 },
-    { obraId: "obra-3", centro: "Hidraulica", orcado: 8500, realizado: 9200 },
-    { obraId: "obra-3", centro: "Eletrica", orcado: 12750, realizado: 14000 },
-    { obraId: "obra-3", centro: "Acabamentos", orcado: 25500, realizado: 28000 },
-    { obraId: "obra-3", centro: "Paisagismo", orcado: 0, realizado: 0 },
-    { obraId: "obra-3", centro: "Administracao", orcado: 17000, realizado: 15300 },
-    { obraId: "obra-4", centro: "Fundacao", orcado: 525000, realizado: 320000 },
-    { obraId: "obra-4", centro: "Estrutura", orcado: 875000, realizado: 85000 },
-    { obraId: "obra-4", centro: "Alvenaria", orcado: 350000, realizado: 0 },
-    { obraId: "obra-4", centro: "Cobertura", orcado: 280000, realizado: 0 },
-    { obraId: "obra-4", centro: "Hidraulica", orcado: 245000, realizado: 0 },
-    { obraId: "obra-4", centro: "Eletrica", orcado: 245000, realizado: 0 },
-    { obraId: "obra-4", centro: "Acabamentos", orcado: 420000, realizado: 0 },
-    { obraId: "obra-4", centro: "Paisagismo", orcado: 175000, realizado: 0 },
-    { obraId: "obra-4", centro: "Administracao", orcado: 385000, realizado: 48000 },
-  ];
-
-  const despesas: DespesaDetalhe[] = [
-    { id: "dc-1", obraId: "obra-1", centro: "Fundacao", descricao: "Concreto para fundacao radier", valor: 28000, data: "2024-03-20", fornecedor: "Concretex Ltda" },
-    { id: "dc-2", obraId: "obra-1", centro: "Fundacao", descricao: "Aco para armacao", valor: 22000, data: "2024-03-25", fornecedor: "AcoFlex Distribuidora" },
-    { id: "dc-3", obraId: "obra-1", centro: "Fundacao", descricao: "Mao de obra fundacao", valor: 15000, data: "2024-04-01", fornecedor: "Equipe Joao Silva" },
-    { id: "dc-4", obraId: "obra-1", centro: "Estrutura", descricao: "Concreto pilares e vigas", valor: 45000, data: "2024-04-15", fornecedor: "Concretex Ltda" },
-    { id: "dc-5", obraId: "obra-1", centro: "Estrutura", descricao: "Aco CA-50 estrutural", valor: 38000, data: "2024-04-20", fornecedor: "AcoFlex Distribuidora" },
-    { id: "dc-6", obraId: "obra-1", centro: "Estrutura", descricao: "Mao de obra estrutura", valor: 35000, data: "2024-05-01", fornecedor: "Construtora Estrutural ME" },
-    { id: "dc-7", obraId: "obra-1", centro: "Alvenaria", descricao: "Tijolos e blocos", valor: 22000, data: "2024-06-01", fornecedor: "Materiais Paulista Ltda" },
-    { id: "dc-8", obraId: "obra-1", centro: "Alvenaria", descricao: "Argamassa e cimento", valor: 12000, data: "2024-06-05", fornecedor: "Materiais Paulista Ltda" },
-    { id: "dc-9", obraId: "obra-1", centro: "Alvenaria", descricao: "Mao de obra alvenaria", valor: 18000, data: "2024-06-10", fornecedor: "Equipe Joao Silva" },
-    { id: "dc-10", obraId: "obra-1", centro: "Hidraulica", descricao: "Tubos e conexoes PVC", valor: 12500, data: "2024-07-01", fornecedor: "Materiais Paulista Ltda" },
-    { id: "dc-11", obraId: "obra-1", centro: "Hidraulica", descricao: "Mao de obra hidraulica", valor: 19000, data: "2024-07-05", fornecedor: "Carlos Santos" },
-    { id: "dc-12", obraId: "obra-1", centro: "Eletrica", descricao: "Fios e cabos eletricos", valor: 18000, data: "2024-07-15", fornecedor: "EletroMais Distribuidora" },
-    { id: "dc-13", obraId: "obra-1", centro: "Eletrica", descricao: "Disjuntores e quadros", valor: 8000, data: "2024-07-18", fornecedor: "EletroMais Distribuidora" },
-    { id: "dc-14", obraId: "obra-1", centro: "Eletrica", descricao: "Mao de obra eletrica", valor: 12000, data: "2024-07-20", fornecedor: "Lucas Ferreira" },
-    { id: "dc-15", obraId: "obra-1", centro: "Cobertura", descricao: "Telhas e madeiramento", valor: 28000, data: "2024-08-01", fornecedor: "Madeireira Central" },
-    { id: "dc-16", obraId: "obra-1", centro: "Acabamentos", descricao: "Pisos ceramicos", valor: 12000, data: "2024-08-10", fornecedor: "Materiais Paulista Ltda" },
-    { id: "dc-17", obraId: "obra-1", centro: "Acabamentos", descricao: "Tintas e massas", valor: 10000, data: "2024-08-12", fornecedor: "Materiais Paulista Ltda" },
-    { id: "dc-18", obraId: "obra-1", centro: "Administracao", descricao: "Escritorio e administrativo", valor: 18500, data: "2024-03-01", fornecedor: "Diversos" },
-    { id: "dc-19", obraId: "obra-2", centro: "Fundacao", descricao: "Estacas e blocos fundacao", valor: 98000, data: "2024-01-20", fornecedor: "Concretex Ltda" },
-    { id: "dc-20", obraId: "obra-2", centro: "Fundacao", descricao: "Servico de estaqueamento", valor: 77000, data: "2024-01-25", fornecedor: "GeoFund Engenharia" },
-    { id: "dc-21", obraId: "obra-2", centro: "Estrutura", descricao: "Concreto estrutural andares", valor: 185000, data: "2024-03-01", fornecedor: "Concretex Ltda" },
-    { id: "dc-22", obraId: "obra-2", centro: "Estrutura", descricao: "Estrutura metalica perfis", valor: 130000, data: "2024-05-15", fornecedor: "MetalPro Distribuidora" },
-    { id: "dc-23", obraId: "obra-2", centro: "Estrutura", descricao: "Mao de obra estrutural", valor: 65000, data: "2024-04-01", fornecedor: "Construtora Estrutural ME" },
-    { id: "dc-24", obraId: "obra-2", centro: "Administracao", descricao: "Custos administrativos", valor: 58000, data: "2024-01-01", fornecedor: "Diversos" },
-  ];
-
-  const mockData = { centros, despesas };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockData));
-  return mockData;
+  return { centros: [], despesas: [] };
 }
 
 function getProgressColor(pct: number): string {
@@ -158,6 +91,7 @@ export default function CentroCustosPage() {
 
   useEffect(() => {
     setMounted(true);
+    syncAll();
     setData(getInitialData());
   }, []);
 
@@ -260,6 +194,7 @@ export default function CentroCustosPage() {
   }
 
   return (
+    <ModuleGuard moduleId="centro-custos" moduleName="Centro de Custos">
     <div>
       <PageHeader title="Centro de Custos" />
 
@@ -359,5 +294,6 @@ export default function CentroCustosPage() {
         </div>
       </div>
     </div>
+    </ModuleGuard>
   );
 }

@@ -33,6 +33,7 @@ interface RegisteredUser {
   role: string;
   companyName: string;
   active: boolean;
+  allowedModules?: string[];
 }
 
 let registeredUsers: RegisteredUser[] = [];
@@ -41,7 +42,7 @@ export function getRegisteredUsers(): RegisteredUser[] {
   return registeredUsers;
 }
 
-export function registerUser(data: { name: string; email: string; password: string; companyName: string }): RegisteredUser {
+export function registerUser(data: { name: string; email: string; password: string; companyName: string; allowedModules?: string[] }): RegisteredUser {
   const user: RegisteredUser = {
     id: `user-${Date.now()}`,
     name: data.name,
@@ -50,6 +51,7 @@ export function registerUser(data: { name: string; email: string; password: stri
     role: "GESTOR",
     companyName: data.companyName,
     active: true,
+    allowedModules: data.allowedModules,
   };
   registeredUsers.push(user);
   return user;
@@ -128,7 +130,7 @@ export function addServerAccessRequest(
   return newRequest;
 }
 
-export function approveServerAccessRequest(id: string): ServerAccessRequest | null {
+export function approveServerAccessRequest(id: string, allowedModules?: string[]): ServerAccessRequest | null {
   const request = serverAccessRequests.find((r) => r.id === id);
   if (request) {
     request.status = "aprovado";
@@ -139,6 +141,7 @@ export function approveServerAccessRequest(id: string): ServerAccessRequest | nu
       email: request.email,
       password: request.senha,
       companyName: request.empresa,
+      allowedModules,
     });
     return request;
   }
@@ -196,4 +199,17 @@ export function unblockServerAccessRequest(id: string): ServerAccessRequest | nu
     return request;
   }
   return null;
+}
+
+export function getUserPermissions(email: string): string[] | undefined {
+  const user = registeredUsers.find((u) => u.email === email);
+  if (!user) return undefined;
+  return user.allowedModules;
+}
+
+export function updateUserPermissions(email: string, modules: string[]): boolean {
+  const user = registeredUsers.find((u) => u.email === email);
+  if (!user) return false;
+  user.allowedModules = modules;
+  return true;
 }

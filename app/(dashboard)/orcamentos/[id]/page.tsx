@@ -20,6 +20,7 @@ import {
   Info,
 } from "lucide-react";
 import { useOrcamentos, useObras } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { generateId } from "@/lib/storage";
 import { PieChart as RechartsPie, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
@@ -435,6 +436,7 @@ export default function OrcamentoDetalhe() {
   };
 
   return (
+    <ModuleGuard moduleId="orcamentos" moduleName="Orcamentos">
     <div className="space-y-6 print:space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Orcamento de Obra</h1>
@@ -665,5 +667,6 @@ export default function OrcamentoDetalhe() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

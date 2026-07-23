@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 
 import { useOrdensServico, useColaboradores, useObras } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { OrdemServico, ChecklistItem } from "@/lib/mock-data";
 import { generateId } from "@/lib/storage";
 
@@ -309,6 +310,7 @@ export default function OrdensServicoPage() {
   }
 
   return (
+    <ModuleGuard moduleId="ordens-servico" moduleName="OS">
     <div>
       <PageHeader
         title="Ordens de Servico"
@@ -628,5 +630,6 @@ export default function OrdensServicoPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </ModuleGuard>
   );
 }

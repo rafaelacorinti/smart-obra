@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useObras } from "@/hooks/use-storage-data";
 import { generateId } from "@/lib/storage";
+import { ModuleGuard } from "@/components/module-guard";
 
 interface Documento {
   id: string;
@@ -190,6 +191,7 @@ export default function DocumentosPage() {
   };
 
   return (
+    <ModuleGuard moduleId="documentos" moduleName="Documentos">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -435,6 +437,7 @@ export default function DocumentosPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }
 

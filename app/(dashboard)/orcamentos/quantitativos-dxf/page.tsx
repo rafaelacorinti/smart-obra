@@ -15,6 +15,7 @@ import {
 } from "@/lib/dxf-quantitativos";
 import { converterQuantitativosParaOrcamento } from "@/lib/quantitativos-to-orcamento";
 import { useOrcamentos } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { generateId } from "@/lib/storage";
 
 const UFS = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"];
@@ -169,6 +170,7 @@ export default function QuantitativosDxfPage() {
   };
 
   return (
+    <ModuleGuard moduleId="orcamentos" moduleName="Orcamentos">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -558,5 +560,6 @@ export default function QuantitativosDxfPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

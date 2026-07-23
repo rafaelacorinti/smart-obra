@@ -30,6 +30,7 @@ import {
   useColaboradores, usePresencas, usePagamentosColaborador,
   useDocumentosColaborador,
 } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { PresencaColaborador, PagamentoColaborador, DocumentoColaborador } from "@/lib/mock-data";
 
 function fmt(value: number) {
@@ -172,6 +173,7 @@ export default function ColaboradorDetailPage() {
   ];
 
   return (
+    <ModuleGuard moduleId="colaboradores" moduleName="Colaboradores">
     <div>
       <PageHeader
         title={colaborador.nome}
@@ -366,5 +368,6 @@ export default function ColaboradorDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </ModuleGuard>
   );
 }

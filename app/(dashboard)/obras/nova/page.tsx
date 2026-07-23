@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useObras, useClientes } from "@/hooks/use-storage-data";
 import Link from "next/link";
+import { ModuleGuard } from "@/components/module-guard";
 
 interface FormErrors {
   nome?: string;
@@ -89,6 +90,7 @@ export default function NovaObraPage() {
   };
 
   return (
+    <ModuleGuard moduleId="obras" moduleName="Obras">
     <div>
       <PageHeader
         title="Nova Obra"
@@ -277,5 +279,6 @@ export default function NovaObraPage() {
         </div>
       </form>
     </div>
+    </ModuleGuard>
   );
 }

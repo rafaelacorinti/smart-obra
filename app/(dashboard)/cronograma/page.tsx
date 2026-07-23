@@ -15,6 +15,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { ModuleGuard } from "@/components/module-guard";
 
 interface EtapaCronograma {
   id: string;
@@ -285,6 +286,7 @@ export default function CronogramaPage() {
   }
 
   return (
+    <ModuleGuard moduleId="cronograma" moduleName="Cronograma">
     <div>
       <PageHeader title="Cronograma Fisico-Financeiro" breadcrumbs={[{ label: "Cronograma" }]} />
       <div className="mb-6">
@@ -420,5 +422,6 @@ export default function CronogramaPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

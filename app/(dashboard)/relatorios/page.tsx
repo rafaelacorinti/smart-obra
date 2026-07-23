@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { BarChart3, DollarSign, TrendingUp, Users, Fuel, Package, ArrowLeft, FileDown, Printer } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from "recharts";
 import * as XLSX from "xlsx";
+import { ModuleGuard } from "@/components/module-guard";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
 
@@ -59,6 +60,7 @@ export default function RelatoriosPage() {
 
   if (!activeReport) {
     return (
+      <ModuleGuard moduleId="relatorios" moduleName="Relatorios">
       <div>
         <PageHeader title="Relatorios" breadcrumbs={[{ label: "Relatorios" }]} />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -77,10 +79,12 @@ export default function RelatoriosPage() {
           ))}
         </div>
       </div>
+      </ModuleGuard>
     );
   }
 
   return (
+    <ModuleGuard moduleId="relatorios" moduleName="Relatorios">
     <div className="print:p-4">
       <PageHeader
         title={reports.find((r) => r.id === activeReport)?.title || "Relatorio"}
@@ -132,6 +136,7 @@ export default function RelatoriosPage() {
       {activeReport === "combustivel" && <RelatorioCombustivel veiculos={veiculos} abastecimentos={abastecimentos} />}
       {activeReport === "materiais" && <RelatorioMateriais materiais={materiais} movimentacoes={movimentacoes} />}
     </div>
+    </ModuleGuard>
   );
 }
 

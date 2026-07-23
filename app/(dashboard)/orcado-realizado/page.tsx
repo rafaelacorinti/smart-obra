@@ -13,6 +13,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useObras } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
+import { syncAll } from "@/lib/sync-modules";
+import { ModuleGuard } from "@/components/module-guard";
 
 interface OrcadoRealizadoItem {
   obraId: string;
@@ -31,34 +33,7 @@ function getInitialData(): OrcadoRealizadoItem[] {
   if (raw) {
     try { return JSON.parse(raw); } catch { /* fall through */ }
   }
-  const mockData: OrcadoRealizadoItem[] = [
-    { obraId: "obra-1", categoria: "Materiais", planejado: 135000, realizado: 148500 },
-    { obraId: "obra-1", categoria: "Mao de Obra", planejado: 112500, realizado: 108000 },
-    { obraId: "obra-1", categoria: "Equipamentos", planejado: 45000, realizado: 38000 },
-    { obraId: "obra-1", categoria: "Terceiros", planejado: 67500, realizado: 72000 },
-    { obraId: "obra-1", categoria: "Administracao", planejado: 22500, realizado: 25800 },
-    { obraId: "obra-1", categoria: "Outros", planejado: 67500, realizado: 55200 },
-    { obraId: "obra-2", categoria: "Materiais", planejado: 360000, realizado: 385000 },
-    { obraId: "obra-2", categoria: "Mao de Obra", planejado: 300000, realizado: 275000 },
-    { obraId: "obra-2", categoria: "Equipamentos", planejado: 180000, realizado: 195000 },
-    { obraId: "obra-2", categoria: "Terceiros", planejado: 120000, realizado: 132000 },
-    { obraId: "obra-2", categoria: "Administracao", planejado: 60000, realizado: 58000 },
-    { obraId: "obra-2", categoria: "Outros", planejado: 180000, realizado: 165000 },
-    { obraId: "obra-3", categoria: "Materiais", planejado: 25500, realizado: 28000 },
-    { obraId: "obra-3", categoria: "Mao de Obra", planejado: 21250, realizado: 35000 },
-    { obraId: "obra-3", categoria: "Equipamentos", planejado: 8500, realizado: 6500 },
-    { obraId: "obra-3", categoria: "Terceiros", planejado: 12750, realizado: 11000 },
-    { obraId: "obra-3", categoria: "Administracao", planejado: 4250, realizado: 4800 },
-    { obraId: "obra-3", categoria: "Outros", planejado: 12750, realizado: 9700 },
-    { obraId: "obra-4", categoria: "Materiais", planejado: 1050000, realizado: 320000 },
-    { obraId: "obra-4", categoria: "Mao de Obra", planejado: 875000, realizado: 185000 },
-    { obraId: "obra-4", categoria: "Equipamentos", planejado: 525000, realizado: 115000 },
-    { obraId: "obra-4", categoria: "Terceiros", planejado: 350000, realizado: 85000 },
-    { obraId: "obra-4", categoria: "Administracao", planejado: 175000, realizado: 48000 },
-    { obraId: "obra-4", categoria: "Outros", planejado: 525000, realizado: 95000 },
-  ];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockData));
-  return mockData;
+  return [];
 }
 
 function getStatus(planejado: number, realizado: number): { label: string; color: string; bgColor: string } {
@@ -77,6 +52,7 @@ export default function OrcadoRealizadoPage() {
 
   useEffect(() => {
     setMounted(true);
+    syncAll();
     setData(getInitialData());
   }, []);
 
@@ -127,6 +103,7 @@ export default function OrcadoRealizadoPage() {
   }
 
   return (
+    <ModuleGuard moduleId="orcado-realizado" moduleName="Orcado x Realizado">
     <div>
       <PageHeader title="Orcado x Realizado" />
 
@@ -270,5 +247,6 @@ export default function OrcadoRealizadoPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

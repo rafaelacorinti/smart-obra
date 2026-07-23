@@ -7,6 +7,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVeiculos, useManutencoesVeiculo, useAbastecimentosVeiculo } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { Veiculo } from "@/lib/mock-data";
 import Link from "next/link";
 
@@ -100,6 +101,7 @@ export default function VeiculosPage() {
   }
 
   return (
+    <ModuleGuard moduleId="veiculos" moduleName="Veiculos">
     <div>
       <PageHeader
         title="Veiculos e Equipamentos"
@@ -324,5 +326,6 @@ export default function VeiculosPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

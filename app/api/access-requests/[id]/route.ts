@@ -17,7 +17,7 @@ export async function PATCH(
     const { id } = params;
 
     if (status === "aprovado") {
-      const result = approveServerAccessRequest(id);
+      const result = approveServerAccessRequest(id, body.allowedModules);
       if (!result) {
         return NextResponse.json(
           { error: "Solicitacao nao encontrada" },

@@ -28,6 +28,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { Obra } from "@/lib/mock-data";
 import Link from "next/link";
+import { ModuleGuard } from "@/components/module-guard";
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   PLANEJAMENTO: { label: "Planejamento", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
@@ -204,6 +205,7 @@ export default function ObraDetailPage() {
   };
 
   return (
+    <ModuleGuard moduleId="obras" moduleName="Obras">
     <div>
       <PageHeader
         title={obra.nome}
@@ -918,5 +920,6 @@ export default function ObraDetailPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

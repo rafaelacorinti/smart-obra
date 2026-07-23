@@ -14,6 +14,7 @@ import { useObras, useFornecedores } from "@/hooks/use-storage-data";
 import { generateId } from "@/lib/storage";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ModuleGuard } from "@/components/module-guard";
 
 type CompraStatus = "SOLICITACAO" | "COTACAO" | "APROVACAO" | "PEDIDO" | "RECEBIMENTO" | "PAGAMENTO";
 
@@ -170,6 +171,7 @@ export default function ComprasPage() {
   };
 
   return (
+    <ModuleGuard moduleId="compras" moduleName="Compras">
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -363,5 +365,6 @@ export default function ComprasPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </ModuleGuard>
   );
 }

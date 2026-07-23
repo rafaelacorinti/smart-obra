@@ -10,6 +10,7 @@ import {
   Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from "@/components/ui/select";
 import { useClientes, useObras } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { Cliente } from "@/lib/mock-data";
 import Link from "next/link";
 
@@ -117,6 +118,7 @@ export default function ClientesPage() {
   }
 
   return (
+    <ModuleGuard moduleId="clientes" moduleName="Clientes">
     <div>
       <PageHeader
         title="Clientes"
@@ -304,5 +306,6 @@ export default function ClientesPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }

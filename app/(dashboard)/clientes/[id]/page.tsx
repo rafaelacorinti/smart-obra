@@ -10,6 +10,7 @@ import { DocumentoCliente } from "@/lib/mock-data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { UserCircle, Building2, DollarSign, ClipboardList, FileText, Plus, MapPin, Mail, Phone } from "lucide-react";
 import Link from "next/link";
+import { ModuleGuard } from "@/components/module-guard";
 
 const statusObraConfig: Record<string, { label: string; color: string }> = {
   PLANEJAMENTO: { label: "Planejamento", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
@@ -74,6 +75,7 @@ export default function ClienteDetalhesPage() {
   const totalReceitas = lancamentosCliente.reduce((acc, l) => acc + l.valor, 0);
 
   return (
+    <ModuleGuard moduleId="clientes" moduleName="Clientes">
     <div>
       <PageHeader
         title={cliente.nome}
@@ -323,5 +325,6 @@ export default function ClienteDetalhesPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </ModuleGuard>
   );
 }

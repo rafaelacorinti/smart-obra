@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 
 import { useColaboradores, usePresencas, useObras } from "@/hooks/use-storage-data";
+import { ModuleGuard } from "@/components/module-guard";
 import { Colaborador } from "@/lib/mock-data";
 
 const colaboradorSchema = z.object({
@@ -198,6 +199,7 @@ export default function ColaboradoresPage() {
   }
 
   return (
+    <ModuleGuard moduleId="colaboradores" moduleName="Colaboradores">
     <div>
       <PageHeader
         title="Colaboradores"
@@ -353,5 +355,6 @@ export default function ColaboradoresPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </ModuleGuard>
   );
 }

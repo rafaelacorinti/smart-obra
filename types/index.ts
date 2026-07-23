@@ -30,6 +30,7 @@ export interface SessionUser {
   role: UserRole;
   companyId: string;
   companyName: string;
+  allowedModules?: string[];
 }
 
 export interface AccessRequest {

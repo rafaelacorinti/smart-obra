@@ -12,6 +12,7 @@ import { useObras, useLancamentos } from "@/hooks/use-storage-data";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
+import { ModuleGuard } from "@/components/module-guard";
 
 type TipoRelatorio = "financeiro" | "obras" | "gestao";
 
@@ -64,6 +65,7 @@ export default function RelatoriosPdfPage() {
   const handlePrint = () => { window.print(); };
 
   return (
+    <ModuleGuard moduleId="relatorios-pdf" moduleName="Relatorios PDF">
     <div className="space-y-6">
       {/* Print styles */}
       <style jsx global>{`
@@ -334,5 +336,6 @@ export default function RelatoriosPdfPage() {
         </div>
       )}
     </div>
+    </ModuleGuard>
   );
 }
