@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -290,7 +290,7 @@ export default function ClienteDetalhesPage() {
                     </div>
                     <span className="rounded-full px-2 py-0.5 text-xs font-medium bg-muted">{doc.tipo}</span>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">Adicionado em {formatDate(doc.criadoEm)}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Adicionado em {formatDate(doc.criadoEm || "")}</p>
                 </div>
               ))}
             </div>

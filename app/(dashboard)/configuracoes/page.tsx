@@ -35,6 +35,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
 import { ALL_MODULES } from "@/lib/module-permissions";
+import { getSetting, setSetting } from "@/lib/supabase/services/app-settings";
+import { createClient } from "@/lib/supabase/client";
 
 const defaultCategoriasFinanceiras = {
   receita: ["Medicao", "Aditivo", "Reembolso", "Venda material", "Consultoria", "Entrada", "Outros"],
@@ -137,7 +139,7 @@ const ACCENT_COLORS = [
   { label: "Rosa", value: "rose", class: "bg-rose-500" },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── localStorage helpers (used only by TabUsuarios which is kept as-is) ─────
 
 function ls<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -199,17 +201,29 @@ function TabEmpresa() {
   const [form, setForm] = useState<EmpresaData>(DEFAULT_EMPRESA);
 
   useEffect(() => {
-    setForm(ls<EmpresaData>("smart-obra-empresa", DEFAULT_EMPRESA));
+    async function loadSettings() {
+      try {
+        const saved = await getSetting("smart-obra-empresa");
+        if (saved) setForm(saved as EmpresaData);
+      } catch {
+        // keep defaults
+      }
+    }
+    loadSettings();
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    lsSet("smart-obra-empresa", form);
-    showToast("Dados da empresa salvos com sucesso!");
+    try {
+      await setSetting("smart-obra-empresa", form);
+      showToast("Dados da empresa salvos com sucesso!");
+    } catch {
+      showToast("Erro ao salvar dados da empresa.", "error");
+    }
   }
 
   return (
@@ -485,22 +499,31 @@ function TabCategorias() {
   const [newDespesa, setNewDespesa] = useState("");
 
   useEffect(() => {
-    const saved = ls<{ receita: string[]; despesa: string[] } | null>(
-      "smart-obra-categorias",
-      null
-    );
-    if (saved) {
-      setReceitas(saved.receita);
-      setDespesas(saved.despesa);
-    } else {
-      setReceitas(defaultCategoriasFinanceiras.receita);
-      setDespesas(defaultCategoriasFinanceiras.despesa);
+    async function loadSettings() {
+      try {
+        const saved = await getSetting("smart-obra-categorias");
+        if (saved) {
+          setReceitas((saved as { receita: string[]; despesa: string[] }).receita);
+          setDespesas((saved as { receita: string[]; despesa: string[] }).despesa);
+        } else {
+          setReceitas(defaultCategoriasFinanceiras.receita);
+          setDespesas(defaultCategoriasFinanceiras.despesa);
+        }
+      } catch {
+        setReceitas(defaultCategoriasFinanceiras.receita);
+        setDespesas(defaultCategoriasFinanceiras.despesa);
+      }
     }
+    loadSettings();
   }, []);
 
-  function persist(r: string[], d: string[]) {
-    lsSet("smart-obra-categorias", { receita: r, despesa: d });
-    showToast("Categorias salvas!");
+  async function persist(r: string[], d: string[]) {
+    try {
+      await setSetting("smart-obra-categorias", { receita: r, despesa: d });
+      showToast("Categorias salvas!");
+    } catch {
+      showToast("Erro ao salvar categorias.", "error");
+    }
   }
 
   function addReceita() {
@@ -619,16 +642,28 @@ function TabIntegracoes() {
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
-    setData(ls<IntegracoesData>("smart-obra-integracoes", DEFAULT_INTEGRACOES));
+    async function loadSettings() {
+      try {
+        const saved = await getSetting("smart-obra-integracoes");
+        if (saved) setData(saved as IntegracoesData);
+      } catch {
+        // keep defaults
+      }
+    }
+    loadSettings();
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
-  function handleSave() {
-    lsSet("smart-obra-integracoes", data);
-    showToast("Configurações de integração salvas!");
+  async function handleSave() {
+    try {
+      await setSetting("smart-obra-integracoes", data);
+      showToast("Configurações de integração salvas!");
+    } catch {
+      showToast("Erro ao salvar configurações de integração.", "error");
+    }
   }
 
   function handleTest() {
@@ -761,57 +796,104 @@ function TabIntegracoes() {
 
 // ─── Tab: Backup ──────────────────────────────────────────────────────────────
 
+// Tables to include in backup export / clear operations
+const BACKUP_TABLES = [
+  "obras",
+  "lancamentos",
+  "colaboradores",
+  "veiculos",
+  "materiais_estoque",
+  "clientes",
+  "fornecedores",
+  "ordens_servico",
+  "compras",
+  "cronograma",
+  "diario_obra",
+  "eventos_calendario",
+  "pagamentos",
+  "orcamentos",
+  "presencas",
+  "movimentacoes",
+  "abastecimentos_veiculo",
+  "manutencoes_veiculo",
+  "documentos_veiculo",
+  "documentos_obra",
+  "documentos_colaborador",
+  "documentos_cliente",
+  "fotos_obra",
+  "materiais_obra",
+  "colaboradores_obra",
+  "timeline_obra",
+  "app_settings",
+] as const;
+
 function TabBackup() {
   const [ultimoBackup, setUltimoBackup] = useState<string | null>(null);
 
   useEffect(() => {
-    setUltimoBackup(ls<string | null>("smart-obra-ultimo-backup", null));
-  }, []);
-
-  function handleExport() {
-    if (typeof window === "undefined") return;
-    const data: Record<string, unknown> = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("smart-obra-")) {
-        try {
-          data[key] = JSON.parse(localStorage.getItem(key) ?? "null");
-        } catch {
-          data[key] = localStorage.getItem(key);
-        }
+    async function loadSettings() {
+      try {
+        const saved = await getSetting("smart-obra-ultimo-backup");
+        if (saved) setUltimoBackup(saved as string);
+      } catch {
+        // no backup timestamp yet
       }
     }
-    const now = new Date().toISOString();
-    data["smart-obra-ultimo-backup"] = now;
-    lsSet("smart-obra-ultimo-backup", now);
-    setUltimoBackup(now);
+    loadSettings();
+  }, []);
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `smart-obra-backup-${now.slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("Backup exportado com sucesso!");
+  async function handleExport() {
+    try {
+      const supabase = createClient();
+      const backup: Record<string, unknown[]> = {};
+
+      await Promise.all(
+        BACKUP_TABLES.map(async (table) => {
+          const { data } = await (supabase as any).from(table).select("*");
+          backup[table] = data ?? [];
+        })
+      );
+
+      const now = new Date().toISOString();
+      backup["_meta"] = [{ exportedAt: now, version: "2.0" }] as unknown[];
+
+      await setSetting("smart-obra-ultimo-backup", now);
+      setUltimoBackup(now);
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `smart-obra-backup-${now.slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Backup exportado com sucesso!");
+    } catch {
+      showToast("Erro ao exportar backup.", "error");
+    }
   }
 
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
-        const parsed = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
+        const parsed = JSON.parse(ev.target?.result as string) as Record<string, unknown[]>;
+        const supabase = createClient();
         let count = 0;
-        for (const [key, value] of Object.entries(parsed)) {
-          if (key.startsWith("smart-obra-")) {
-            localStorage.setItem(key, JSON.stringify(value));
-            count++;
-          }
+
+        for (const [table, rows] of Object.entries(parsed)) {
+          if (table === "_meta") continue;
+          if (!BACKUP_TABLES.includes(table as (typeof BACKUP_TABLES)[number])) continue;
+          if (!Array.isArray(rows) || rows.length === 0) continue;
+          const { error } = await (supabase as any).from(table).upsert(rows as any[], { ignoreDuplicates: false });
+          if (!error) count += rows.length;
         }
-        setUltimoBackup(ls<string | null>("smart-obra-ultimo-backup", null));
-        showToast(`${count} chaves restauradas com sucesso!`);
+
+        const newTs = await getSetting("smart-obra-ultimo-backup");
+        if (newTs) setUltimoBackup(newTs as string);
+        showToast(`${count} registros restaurados com sucesso!`);
       } catch {
         showToast("Arquivo inválido ou corrompido.", "error");
       }
@@ -820,20 +902,25 @@ function TabBackup() {
     e.target.value = "";
   }
 
-  function handleClear() {
+  async function handleClear() {
     const ok = window.confirm(
       "Tem certeza que deseja LIMPAR TODOS OS DADOS do Smart Obra? Esta ação não pode ser desfeita."
     );
     if (!ok) return;
-    if (typeof window === "undefined") return;
-    const keys: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith("smart-obra-")) keys.push(k);
+    try {
+      const supabase = createClient();
+      // Delete from tables that support it (exclude app_settings to preserve settings)
+      const dataTables = BACKUP_TABLES.filter((t) => t !== "app_settings");
+      await Promise.all(
+        dataTables.map((table) =>
+          (supabase as any).from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000")
+        )
+      );
+      setUltimoBackup(null);
+      showToast("Todos os dados foram removidos.");
+    } catch {
+      showToast("Erro ao limpar dados.", "error");
     }
-    keys.forEach((k) => localStorage.removeItem(k));
-    setUltimoBackup(null);
-    showToast("Todos os dados foram removidos.");
   }
 
   return (
@@ -906,13 +993,25 @@ function TabAparencia() {
 
   useEffect(() => {
     setMounted(true);
-    setAccentColor(ls<string>("smart-obra-accent-color", "blue"));
+    async function loadSettings() {
+      try {
+        const saved = await getSetting("smart-obra-accent-color");
+        if (saved) setAccentColor(saved as string);
+      } catch {
+        // keep default
+      }
+    }
+    loadSettings();
   }, []);
 
-  function handleAccent(value: string) {
+  async function handleAccent(value: string) {
     setAccentColor(value);
-    lsSet("smart-obra-accent-color", value);
-    showToast("Cor de destaque salva!");
+    try {
+      await setSetting("smart-obra-accent-color", value);
+      showToast("Cor de destaque salva!");
+    } catch {
+      showToast("Erro ao salvar cor de destaque.", "error");
+    }
   }
 
   if (!mounted) return null;
@@ -1566,8 +1665,6 @@ function TabSolicitacoes() {
 
 // ─── Tab: Notificacoes ────────────────────────────────────────────────────────
 
-const NOTIFICATION_PREFS_KEY = "smart-obra-notification-prefs";
-
 interface NotificationPrefs {
   estoqueBaixo: boolean;
   manutencaoVencida: boolean;
@@ -1588,14 +1685,26 @@ function TabNotificacoes() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
 
   useEffect(() => {
-    setPrefs(ls<NotificationPrefs>(NOTIFICATION_PREFS_KEY, DEFAULT_NOTIFICATION_PREFS));
+    async function loadSettings() {
+      try {
+        const saved = await getSetting("smart-obra-notification-prefs");
+        if (saved) setPrefs(saved as NotificationPrefs);
+      } catch {
+        // keep defaults
+      }
+    }
+    loadSettings();
   }, []);
 
-  function toggle(key: keyof NotificationPrefs) {
+  async function toggle(key: keyof NotificationPrefs) {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
-    lsSet(NOTIFICATION_PREFS_KEY, next);
-    showToast("Preferencias de notificacao salvas!");
+    try {
+      await setSetting("smart-obra-notification-prefs", next);
+      showToast("Preferencias de notificacao salvas!");
+    } catch {
+      showToast("Erro ao salvar preferencias.", "error");
+    }
   }
 
   const items: { key: keyof NotificationPrefs; label: string; desc: string }[] = [

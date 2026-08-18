@@ -16,7 +16,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { useObras } from "@/hooks/use-storage-data";
-import { generateId } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
 import { ModuleGuard } from "@/components/module-guard";
 
 interface Documento {
@@ -41,22 +41,6 @@ const CATEGORIAS = [
   "Planta",
   "Outro",
 ];
-
-const STORAGE_KEY = "smart-obra-documents";
-
-function getDocumentos(): Documento[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function salvarDocumentos(docs: Documento[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
-}
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -87,6 +71,7 @@ function getFileIconSmall(tipo: string) {
 }
 
 export default function DocumentosPage() {
+  const supabase = createClient();
   const { obras } = useObras();
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [showUpload, setShowUpload] = useState(false);
@@ -104,7 +89,28 @@ export default function DocumentosPage() {
   const [obraVinculada, setObraVinculada] = useState("");
 
   useEffect(() => {
-    setDocumentos(getDocumentos());
+    const fetchDocumentos = async () => {
+      const { data, error } = await supabase
+        .from("documentos_obra")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) { console.error(error); return; }
+      setDocumentos(
+        (data || []).map((d: any) => ({
+          id: d.id,
+          nome: d.nome,
+          tipo: d.tipo,
+          tamanho: d.tamanho,
+          categoria: d.categoria,
+          descricao: d.descricao,
+          obraId: d.obra_id,
+          obraNome: d.obra_nome,
+          dataUpload: d.data_upload,
+          base64: d.url,
+        }))
+      );
+    };
+    fetchDocumentos();
   }, []);
 
   const documentosFiltrados = useMemo(() => {
@@ -136,25 +142,44 @@ export default function DocumentosPage() {
     }
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const base64 = ev.target?.result as string;
       const obraSelecionada = obras.find((o: any) => o.id === obraVinculada);
+      const dataUpload = new Date().toISOString();
+
+      const { data, error } = await supabase
+        .from("documentos_obra")
+        .insert({
+          obra_id: obraVinculada,
+          nome: arquivo.name,
+          tipo: arquivo.type || getExtensionType(arquivo.name),
+          url: base64,
+          categoria,
+          tamanho: arquivo.size,
+          descricao,
+          obra_nome: obraSelecionada?.nome || "",
+          data_upload: dataUpload,
+        } as any)
+        .select()
+        .single();
+
+      if (error) { console.error(error); return; }
+
+      const d = data as any;
       const novoDoc: Documento = {
-        id: generateId(),
-        nome: arquivo.name,
-        tipo: arquivo.type || getExtensionType(arquivo.name),
-        tamanho: arquivo.size,
-        categoria,
-        descricao,
-        obraId: obraVinculada,
-        obraNome: obraSelecionada?.nome || "",
-        dataUpload: new Date().toISOString(),
-        base64,
+        id: d.id,
+        nome: d.nome,
+        tipo: d.tipo,
+        tamanho: d.tamanho,
+        categoria: d.categoria,
+        descricao: d.descricao,
+        obraId: d.obra_id,
+        obraNome: d.obra_nome,
+        dataUpload: d.data_upload,
+        base64: d.url,
       };
 
-      const novosDocumentos = [...documentos, novoDoc];
-      setDocumentos(novosDocumentos);
-      salvarDocumentos(novosDocumentos);
+      setDocumentos((prev) => [novoDoc, ...prev]);
 
       // Reset form
       setArquivo(null);
@@ -177,11 +202,14 @@ export default function DocumentosPage() {
     document.body.removeChild(link);
   };
 
-  const handleExcluir = (docId: string) => {
+  const handleExcluir = async (docId: string) => {
     if (!confirm("Deseja realmente excluir este documento?")) return;
-    const novosDocumentos = documentos.filter((d) => d.id !== docId);
-    setDocumentos(novosDocumentos);
-    salvarDocumentos(novosDocumentos);
+    const { error } = await supabase
+      .from("documentos_obra")
+      .delete()
+      .eq("id", docId);
+    if (error) { console.error(error); return; }
+    setDocumentos((prev) => prev.filter((d) => d.id !== docId));
   };
 
   const handlePreview = (doc: Documento) => {

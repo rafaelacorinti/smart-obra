@@ -1,4 +1,4 @@
-import { generateId } from "./storage";
+﻿import { generateId } from "./storage";
 
 // Types
 export interface Obra {
@@ -17,7 +17,7 @@ export interface Obra {
   status: "PLANEJAMENTO" | "EM_ANDAMENTO" | "PAUSADA" | "CONCLUIDA" | "CANCELADA";
   descricao: string;
   fotoCapa?: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface DiarioObra {
@@ -27,7 +27,7 @@ export interface DiarioObra {
   clima: "ENSOLARADO" | "NUBLADO" | "CHUVOSO" | "TEMPESTADE";
   descricao: string;
   fotos: string[];
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface FotoObra {
@@ -35,7 +35,7 @@ export interface FotoObra {
   obraId: string;
   url: string;
   descricao: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface DocumentoObra {
@@ -44,7 +44,7 @@ export interface DocumentoObra {
   nome: string;
   tipo: "CONTRATO" | "PROJETO" | "ALVARA" | "ORCAMENTO" | "OUTRO";
   url: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface TimelineObra {
@@ -54,7 +54,7 @@ export interface TimelineObra {
   titulo: string;
   descricao: string;
   data: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface ColaboradorObra {
@@ -91,7 +91,7 @@ export interface LancamentoFinanceiro {
   comprovante?: string;
   parcela?: number;
   totalParcelas?: number;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface ChecklistItem {
@@ -161,7 +161,7 @@ export interface DocumentoColaborador {
   nome: string;
   validade?: string;
   url: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface Colaborador {
@@ -232,7 +232,7 @@ export interface Veiculo {
   kmAtual: number;
   horimetro: number;
   status: "ATIVO" | "MANUTENCAO" | "INATIVO";
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface ManutencaoVeiculo {
@@ -244,7 +244,7 @@ export interface ManutencaoVeiculo {
   custo: number;
   kmNaManutencao: number;
   proximaKm?: number;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface AbastecimentoVeiculo {
@@ -255,7 +255,7 @@ export interface AbastecimentoVeiculo {
   precoLitro: number;
   total: number;
   km: number;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface DocumentoVeiculo {
@@ -265,7 +265,7 @@ export interface DocumentoVeiculo {
   nome: string;
   validade: string;
   url: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 // === ORCAMENTOS ===
@@ -331,7 +331,7 @@ export interface Orcamento {
   valorEncargos?: number;
   valorContingencia?: number;
   total: number;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 // === CLIENTES ===
@@ -350,7 +350,7 @@ export interface Cliente {
   cidade: string;
   uf: string;
   observacoes?: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 export interface DocumentoCliente {
@@ -359,7 +359,7 @@ export interface DocumentoCliente {
   tipo: "CONTRATO" | "PROPOSTA" | "ORCAMENTO" | "OUTRO";
   nome: string;
   url: string;
-  criadoEm: string;
+  criadoEm?: string;
 }
 
 // Seed Data
@@ -759,4 +759,5 @@ export const documentosClienteIniciais: DocumentoCliente[] = [
   { id: "doccli-7", clienteId: "cli-5", tipo: "PROPOSTA", nome: "Proposta reforma residencial", url: "#", criadoEm: "2024-03-15" },
   { id: "doccli-8", clienteId: "cli-7", tipo: "CONTRATO", nome: "Contrato parceria obras", url: "#", criadoEm: "2024-02-01" },
 ];
+
 

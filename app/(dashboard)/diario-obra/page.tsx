@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { BookOpen, Plus, Sun, Cloud, CloudRain, CloudSun, ChevronDown, ChevronUp, Image, Video, X, Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useObras } from "@/hooks/use-storage-data";
-import { generateId } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ModuleGuard } from "@/components/module-guard";
 
@@ -20,38 +20,6 @@ interface RegistroDiario {
   fotos: string[];
   videos: string[];
   criadoEm: string;
-}
-
-const STORAGE_KEY = "smart-obra-diario";
-
-function getDiarioStorage(): RegistroDiario[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((item: any) => ({
-      id: item.id ?? "",
-      obraId: item.obraId ?? "",
-      data: item.data ?? "",
-      equipePresenteNumero: item.equipePresenteNumero ?? 0,
-      equipeNomes: item.equipeNomes ?? "",
-      atividadesExecutadas: item.atividadesExecutadas ?? item.descricao ?? "",
-      ocorrencias: item.ocorrencias ?? "",
-      clima: item.clima ?? "ENSOLARADO",
-      fotos: Array.isArray(item.fotos) ? item.fotos : [],
-      videos: Array.isArray(item.videos) ? item.videos : [],
-      criadoEm: item.criadoEm ?? "",
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function setDiarioStorage(registros: RegistroDiario[]): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
 }
 
 function getClimaIcon(clima: string) {
@@ -101,14 +69,42 @@ export default function DiarioObraPage() {
 
   useEffect(() => {
     if (selectedObraId) {
-      const all = getDiarioStorage();
-      setRegistros(all.filter((r) => r.obraId === selectedObraId).sort((a, b) => b.data.localeCompare(a.data)));
+      loadRegistros(selectedObraId);
     }
   }, [selectedObraId]);
 
+  async function loadRegistros(obraId: string) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("diario_obra")
+      .select("*")
+      .eq("obra_id", obraId)
+      .order("data", { ascending: false });
+
+    if (error) {
+      console.error("Erro ao carregar diario:", error);
+      return;
+    }
+
+    const mapped: RegistroDiario[] = (data || []).map((d: any) => ({
+      id: d.id,
+      obraId: d.obra_id,
+      data: d.data,
+      equipePresenteNumero: d.equipe_presente_numero,
+      equipeNomes: d.equipe_nomes,
+      atividadesExecutadas: d.descricao,
+      ocorrencias: d.ocorrencias,
+      clima: d.clima,
+      fotos: d.fotos || [],
+      videos: d.videos || [],
+      criadoEm: d.created_at,
+    }));
+
+    setRegistros(mapped);
+  }
+
   function refresh() {
-    const all = getDiarioStorage();
-    setRegistros(all.filter((r) => r.obraId === selectedObraId).sort((a, b) => b.data.localeCompare(a.data)));
+    if (selectedObraId) loadRegistros(selectedObraId);
   }
 
   function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -145,17 +141,27 @@ export default function DiarioObraPage() {
     }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!formData.atividadesExecutadas.trim()) return;
-    const newRegistro: RegistroDiario = {
-      ...formData,
-      id: generateId(),
-      obraId: selectedObraId,
-      criadoEm: new Date().toISOString(),
-    };
-    const all = getDiarioStorage();
-    all.push(newRegistro);
-    setDiarioStorage(all);
+
+    const supabase = createClient();
+    const { error } = await supabase.from("diario_obra").insert({
+      obra_id: selectedObraId,
+      data: formData.data,
+      clima: formData.clima,
+      descricao: formData.atividadesExecutadas,
+      equipe_presente_numero: Number(formData.equipePresenteNumero),
+      equipe_nomes: formData.equipeNomes,
+      ocorrencias: formData.ocorrencias,
+      fotos: formData.fotos,
+      videos: formData.videos,
+    } as any);
+
+    if (error) {
+      console.error("Erro ao salvar registro:", error);
+      return;
+    }
+
     refresh();
     setShowForm(false);
     setFormData({

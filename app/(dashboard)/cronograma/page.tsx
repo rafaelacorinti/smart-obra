@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Calendar, Edit2, AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { useObras } from "@/hooks/use-storage-data";
-import { generateId } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
 import {
   LineChart,
   Line,
@@ -29,18 +29,6 @@ interface EtapaCronograma {
   status: "NAO_INICIADA" | "EM_ANDAMENTO" | "CONCLUIDA" | "ATRASADA";
   ordem: number;
   dependeDe?: string;
-}
-
-const STORAGE_KEY = "smart-obra-cronograma";
-function getStorage(): EtapaCronograma[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-function setStorageData(etapas: EtapaCronograma[]): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(etapas));
 }
 
 
@@ -191,10 +179,31 @@ export default function CronogramaPage() {
   }, [obras, selectedObraId]);
 
   useEffect(() => {
-    if (selectedObraId) {
-      const allEtapas = getStorage();
-      setEtapas(allEtapas.filter((e) => e.obraId === selectedObraId).sort((a, b) => a.ordem - b.ordem));
-    }
+    if (!selectedObraId) return;
+    const supabase = createClient();
+    supabase
+      .from("cronograma_etapas")
+      .select("*")
+      .eq("obra_id", selectedObraId)
+      .order("ordem", { ascending: true })
+      .then(({ data }: any) => {
+        if (!data) return;
+        setEtapas(
+          data.map((d: any) => ({
+            id: d.id,
+            obraId: d.obra_id,
+            nome: d.nome,
+            dataPrevista: d.data_prevista,
+            dataRealizada: d.data_realizada ?? "",
+            percentualConcluido: Number(d.percentual_concluido),
+            valorPlanejado: Number(d.valor_planejado),
+            valorRealizado: Number(d.valor_realizado),
+            status: d.status,
+            ordem: d.ordem,
+            dependeDe: d.depende_de ?? undefined,
+          }))
+        );
+      });
   }, [selectedObraId]);
 
   const curvaSData = useMemo(() => {
@@ -230,18 +239,41 @@ export default function CronogramaPage() {
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
   }
 
-  function handleEditSave() {
+  async function handleEditSave() {
     if (!editingEtapa) return;
-    const all = getStorage();
-    const idx = all.findIndex((e) => e.id === editingEtapa.id);
-    if (idx !== -1) {
-      all[idx] = { ...editingEtapa };
-      if (editingEtapa.percentualConcluido >= 100) all[idx].status = "CONCLUIDA";
-      else if (editingEtapa.percentualConcluido > 0) all[idx].status = "EM_ANDAMENTO";
-      if (editingEtapa.percentualConcluido < 100 && new Date(editingEtapa.dataPrevista) < new Date()) all[idx].status = "ATRASADA";
-      setStorageData(all);
-      setEtapas(all.filter((e) => e.obraId === selectedObraId).sort((a, b) => a.ordem - b.ordem));
+    const supabase = createClient();
+
+    let newStatus = editingEtapa.status;
+    if (editingEtapa.percentualConcluido >= 100) {
+      newStatus = "CONCLUIDA";
+    } else if (editingEtapa.percentualConcluido > 0) {
+      newStatus = "EM_ANDAMENTO";
     }
+    if (editingEtapa.percentualConcluido < 100 && new Date(editingEtapa.dataPrevista) < new Date()) {
+      newStatus = "ATRASADA";
+    }
+
+    await supabase
+      .from("cronograma_etapas")
+      .update({
+        data_prevista: editingEtapa.dataPrevista,
+        data_realizada: editingEtapa.dataRealizada || null,
+        percentual_concluido: editingEtapa.percentualConcluido,
+        valor_realizado: editingEtapa.valorRealizado,
+        status: newStatus,
+      } as any)
+      .eq("id", editingEtapa.id);
+
+    setEtapas((prev) =>
+      prev
+        .map((e) =>
+          e.id === editingEtapa.id
+            ? { ...editingEtapa, status: newStatus }
+            : e
+        )
+        .sort((a, b) => a.ordem - b.ordem)
+    );
+
     setShowEditModal(false);
     setEditingEtapa(null);
   }

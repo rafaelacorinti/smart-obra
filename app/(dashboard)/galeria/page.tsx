@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon, Upload, X, ChevronLeft, ChevronRight, Camera, Calendar, Smartphone, Columns2 } from "lucide-react";
 import { useObras } from "@/hooks/use-storage-data";
 import { ModuleGuard } from "@/components/module-guard";
-import { generateId } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,18 +26,7 @@ interface FotoGaleria {
   criadoEm: string;
 }
 
-const STORAGE_KEY = "smart-obra-galeria";
 const ETAPAS = ["Fundacao","Estrutura","Alvenaria","Cobertura","Instalacoes Eletricas","Instalacoes Hidraulicas","Revestimento","Pintura","Acabamento","Paisagismo","Limpeza Final"];
-
-function getFotos(): FotoGaleria[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-function saveFotos(fotos: FotoGaleria[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(fotos));
-}
 
 export default function GaleriaPage() {
   const { obras } = useObras();
@@ -56,7 +45,32 @@ export default function GaleriaPage() {
   const [uploadData, setUploadData] = useState(new Date().toISOString().split("T")[0]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setFotos(getFotos()); }, []);
+  useEffect(() => { loadFotos(); }, []);
+
+  async function loadFotos() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("fotos_obra")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Erro ao carregar fotos:", error);
+      return;
+    }
+
+    const mapped: FotoGaleria[] = (data || []).map((d: any) => ({
+      id: d.id,
+      obraId: d.obra_id,
+      data: d.data,
+      descricao: d.descricao,
+      etapa: d.etapa,
+      base64: d.url,
+      criadoEm: d.created_at,
+    }));
+
+    setFotos(mapped);
+  }
 
   const fotosFiltradas = fotos
     .filter((f) => obraSelecionada === "todas" || f.obraId === obraSelecionada)
@@ -81,14 +95,26 @@ export default function GaleriaPage() {
     });
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (uploadFiles.length === 0 || obraSelecionada === "todas" || !uploadEtapa) return;
-    const novasFotos: FotoGaleria[] = uploadFiles.map((base64) => ({
-      id: generateId(), obraId: obraSelecionada, data: uploadData, descricao: uploadDescricao, etapa: uploadEtapa, base64, criadoEm: new Date().toISOString(),
+
+    const supabase = createClient();
+    const rows = uploadFiles.map((base64String) => ({
+      obra_id: obraSelecionada,
+      url: base64String,
+      descricao: uploadDescricao,
+      data: uploadData,
+      etapa: uploadEtapa,
     }));
-    const updated = [...fotos, ...novasFotos];
-    saveFotos(updated);
-    setFotos(updated);
+
+    const { error } = await supabase.from("fotos_obra").insert(rows as any);
+
+    if (error) {
+      console.error("Erro ao fazer upload das fotos:", error);
+      return;
+    }
+
+    await loadFotos();
     setUploadFiles([]);
     setUploadDescricao("");
     setUploadEtapa("");
@@ -103,10 +129,16 @@ export default function GaleriaPage() {
     });
   };
 
-  const deleteFoto = (id: string) => {
-    const updated = fotos.filter((f) => f.id !== id);
-    saveFotos(updated);
-    setFotos(updated);
+  const deleteFoto = async (id: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("fotos_obra").delete().eq("id", id);
+
+    if (error) {
+      console.error("Erro ao deletar foto:", error);
+      return;
+    }
+
+    setFotos((prev) => prev.filter((f) => f.id !== id));
     setFotosComparacao((prev) => prev.filter((fid) => fid !== id));
   };
 

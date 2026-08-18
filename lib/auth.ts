@@ -1,40 +1,6 @@
 ﻿import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { getRegisteredUsers } from "@/lib/mock-store";
-
-// Mock users for development (no database required)
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "Administrador",
-    email: "admin@smartobra.com",
-    password: "smart123",
-    role: "ADMIN",
-    companyId: "company-1",
-    companyName: "Smart Obra Ltda",
-    active: true,
-  },
-  {
-    id: "2",
-    name: "Carlos Financeiro",
-    email: "financeiro@smartobra.com",
-    password: "smart123",
-    role: "FINANCEIRO",
-    companyId: "company-1",
-    companyName: "Smart Obra Ltda",
-    active: true,
-  },
-  {
-    id: "3",
-    name: "Maria Gestora",
-    email: "gestor@smartobra.com",
-    password: "smart123",
-    role: "GESTOR",
-    companyId: "company-1",
-    companyName: "Smart Obra Ltda",
-    active: true,
-  },
-];
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -55,47 +21,41 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Credenciais invalidas");
         }
 
-        // Check mock users first
-        const mockUser = MOCK_USERS.find(
-          (u) => u.email === credentials.email && u.active
-        );
+        // Authenticate via Supabase Auth
+        const { data: authData, error: authError } =
+          await supabaseAdmin.auth.signInWithPassword({
+            email: credentials.email,
+            password: credentials.password,
+          });
 
-        if (mockUser) {
-          if (mockUser.password !== credentials.password) {
-            throw new Error("Senha incorreta");
-          }
-          return {
-            id: mockUser.id,
-            name: mockUser.name,
-            email: mockUser.email,
-            role: mockUser.role,
-            companyId: mockUser.companyId,
-            companyName: mockUser.companyName,
-          };
+        if (authError || !authData.user) {
+          throw new Error("Email ou senha incorretos");
         }
 
-        // Check registered users (approved access requests)
-        const registeredUsers = getRegisteredUsers();
-        const regUser = registeredUsers.find(
-          (u) => u.email === credentials.email && u.active
-        );
+        // Fetch user profile from user_profiles table
+        const { data: profile, error: profileError } = await supabaseAdmin
+          .from("user_profiles")
+          .select("*")
+          .eq("id", authData.user.id)
+          .single();
 
-        if (regUser) {
-          if (regUser.password !== credentials.password) {
-            throw new Error("Senha incorreta");
-          }
-          return {
-            id: regUser.id,
-            name: regUser.name,
-            email: regUser.email,
-            role: regUser.role,
-            companyId: "company-1",
-            companyName: regUser.companyName,
-            allowedModules: regUser.allowedModules,
-          };
+        if (profileError || !profile) {
+          throw new Error("Perfil de usuario nao encontrado");
         }
 
-        throw new Error("Usuario nao encontrado ou inativo");
+        if (!profile.active) {
+          throw new Error("Usuario bloqueado ou inativo");
+        }
+
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          role: profile.role,
+          companyId: "company-1",
+          companyName: profile.company_name || "Smart Obra",
+          allowedModules: profile.allowed_modules as string[] | undefined,
+        };
       },
     }),
   ],

@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   BarChart3, AlertTriangle, CheckCircle2, TrendingUp,
 } from "lucide-react";
@@ -15,6 +15,7 @@ import { useObras } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
 import { syncAll } from "@/lib/sync-modules";
 import { ModuleGuard } from "@/components/module-guard";
+import { createClient } from "@/lib/supabase/client";
 
 interface OrcadoRealizadoItem {
   obraId: string;
@@ -24,17 +25,6 @@ interface OrcadoRealizadoItem {
 }
 
 const CATEGORIAS = ["Materiais", "Mao de Obra", "Equipamentos", "Terceiros", "Administracao", "Outros"];
-
-const STORAGE_KEY = "smart-obra-orcado-realizado";
-
-function getInitialData(): OrcadoRealizadoItem[] {
-  if (typeof window === "undefined") return [];
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try { return JSON.parse(raw); } catch { /* fall through */ }
-  }
-  return [];
-}
 
 function getStatus(planejado: number, realizado: number): { label: string; color: string; bgColor: string } {
   if (planejado === 0) return { label: "N/A", color: "text-gray-500", bgColor: "bg-gray-100" };
@@ -47,13 +37,38 @@ function getStatus(planejado: number, realizado: number): { label: string; color
 export default function OrcadoRealizadoPage() {
   const { obras, loading: loadingObras } = useObras();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [selectedObra, setSelectedObra] = useState<string>("");
-  const [data, setData] = useState<OrcadoRealizadoItem[]>([]);
+  const [dados, setDados] = useState<OrcadoRealizadoItem[]>([]);
+
+  const selectedObraId = selectedObra;
+
+  const loadData = useCallback(async () => {
+    if (!selectedObraId) return;
+    try {
+      setLoading(true);
+      await syncAll();
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("orcado_realizado")
+        .select("*")
+        .eq("obra_id", selectedObraId);
+
+      setDados((data || []).map((d: any) => ({
+        obraId: d.obra_id,
+        categoria: d.categoria,
+        planejado: Number(d.planejado),
+        realizado: Number(d.realizado),
+      })));
+    } catch (error) {
+      console.error("Erro ao carregar orcado x realizado:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedObraId]);
 
   useEffect(() => {
     setMounted(true);
-    syncAll();
-    setData(getInitialData());
   }, []);
 
   useEffect(() => {
@@ -62,11 +77,17 @@ export default function OrcadoRealizadoPage() {
     }
   }, [obras, selectedObra]);
 
-  const loading = !mounted || loadingObras;
+  useEffect(() => {
+    if (mounted && selectedObraId) {
+      loadData();
+    }
+  }, [mounted, loadData, selectedObraId]);
+
+  const isLoading = !mounted || loadingObras || loading;
 
   const filteredData = useMemo(() => {
-    return data.filter((d) => d.obraId === selectedObra);
-  }, [data, selectedObra]);
+    return dados.filter((d) => d.obraId === selectedObra);
+  }, [dados, selectedObra]);
 
   const totalPlanejado = filteredData.reduce((s, d) => s + d.planejado, 0);
   const totalRealizado = filteredData.reduce((s, d) => s + d.realizado, 0);
@@ -90,7 +111,7 @@ export default function OrcadoRealizadoPage() {
     return ((d.realizado - d.planejado) / d.planejado) * 100 > 5;
   });
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div>
         <PageHeader title="Orcado x Realizado" />

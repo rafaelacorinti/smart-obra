@@ -1,7 +1,6 @@
-// Synchronization layer: derives Centro de Custos and Orçado x Realizado
-// from Orçamentos (budget) and Financeiro (actual expenses).
+﻿import { createClient } from "@/lib/supabase/client";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ---- Types ----
 
 interface ComposicaoDetalhe {
   tipo: "material" | "maoDeObra" | "equipamento";
@@ -30,63 +29,46 @@ interface CapituloOrcamento {
 
 interface SyncOrcamento {
   id: string;
-  obraId: string;
+  obra_id: string;
   status: string;
   capitulos: CapituloOrcamento[];
   subtotal: number;
-  valorBdi: number;
-  valorEncargos?: number;
-  valorContingencia?: number;
+  valor_bdi: number;
+  valor_encargos?: number;
+  valor_contingencia?: number;
   total: number;
-  fatorRegional?: number;
+  fator_regional?: number;
   bdi?: number;
   contingencia?: number;
-  [key: string]: any;
 }
 
 interface SyncLancamento {
   id: string;
-  obraId?: string;
+  obra_id?: string;
   tipo: "RECEITA" | "DESPESA";
   categoria: string;
   descricao: string;
   valor: number;
   data: string;
   status: string;
-  fornecedorCliente?: string;
-  [key: string]: any;
+  fornecedor_cliente?: string;
 }
 
 interface CentroCustoItem {
-  obraId: string;
+  obra_id: string;
   centro: string;
   orcado: number;
   realizado: number;
 }
 
-interface DespesaDetalhe {
-  id: string;
-  obraId: string;
-  centro: string;
-  descricao: string;
-  valor: number;
-  data: string;
-  fornecedor: string;
-}
-
 interface OrcadoRealizadoItem {
-  obraId: string;
+  obra_id: string;
   categoria: string;
   planejado: number;
   realizado: number;
 }
 
-interface SyncObra {
-  id: string;
-  [key: string]: any;
-}
-
-// ─── Category mappings ───────────────────────────────────────────────────────
+// ---- Category mappings ----
 
 const FINANCEIRO_TO_ORCADO_REALIZADO: Record<string, string> = {
   "Material": "Materiais",
@@ -124,45 +106,7 @@ const CATEGORIAS_ORCADO_REALIZADO = [
   "Materiais", "Mao de Obra", "Equipamentos", "Terceiros", "Administracao", "Outros",
 ];
 
-// ─── Storage keys ────────────────────────────────────────────────────────────
-
-const ORCAMENTOS_KEY = "smart-obra-orcamentos";
-const LANCAMENTOS_KEY = "smart-obra-lancamentos";
-const CENTRO_CUSTOS_KEY = "smart-obra-centro-custos";
-const ORCADO_REALIZADO_KEY = "smart-obra-orcado-realizado";
-const OBRAS_KEY = "smart-obra-obras";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function readStorage<T>(key: string): T | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function writeStorage(key: string, data: any): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
-function getOrcamentos(): SyncOrcamento[] {
-  return readStorage<SyncOrcamento[]>(ORCAMENTOS_KEY) || [];
-}
-
-function getLancamentos(): SyncLancamento[] {
-  return readStorage<SyncLancamento[]>(LANCAMENTOS_KEY) || [];
-}
-
-function getObras(): SyncObra[] {
-  return readStorage<SyncObra[]>(OBRAS_KEY) || [];
-}
-
-// ─── Compute budget breakdown from an orcamento ─────────────────────────────
+// ---- Helpers ----
 
 function computeOrcamentoCostBreakdown(orc: SyncOrcamento) {
   let custoMateriais = 0;
@@ -190,21 +134,19 @@ function computeOrcamentoCostBreakdown(orc: SyncOrcamento) {
   return { custoMateriais, custoMaoDeObra, custoEquipamentos };
 }
 
-// ─── Sync Centro de Custos for a single obra ────────────────────────────────
-
-function syncCentroCustosForObra(
+function computeCentroCustos(
   obraId: string,
   orcamentos: SyncOrcamento[],
   lancamentos: SyncLancamento[]
-): { centros: CentroCustoItem[]; despesas: DespesaDetalhe[] } {
-  const obraOrcamentos = orcamentos.filter((o) => o.obraId === obraId);
+): CentroCustoItem[] {
+  const obraOrcamentos = orcamentos.filter((o) => o.obra_id === obraId);
   const obraLancamentos = lancamentos.filter(
-    (l) => l.obraId === obraId && l.tipo === "DESPESA" && l.status === "PAGO"
+    (l) => l.obra_id === obraId && l.tipo === "DESPESA" && l.status === "PAGO"
   );
 
   const centroOrcado: Record<string, number> = {};
   obraOrcamentos.forEach((orc) => {
-    const fator = orc.fatorRegional || 1;
+    const fator = orc.fator_regional || 1;
     (orc.capitulos || []).forEach((cap) => {
       const subtotalCap = cap.itens.reduce(
         (s, item) => s + item.quantidade * item.precoUnitario, 0
@@ -215,59 +157,43 @@ function syncCentroCustosForObra(
   });
 
   const centroRealizado: Record<string, number> = {};
-  const despesas: DespesaDetalhe[] = [];
-
   obraLancamentos.forEach((l) => {
     const centro = FINANCEIRO_TO_CENTRO_CUSTO[l.categoria] || "Outros";
     centroRealizado[centro] = (centroRealizado[centro] || 0) + l.valor;
-    despesas.push({
-      id: l.id,
-      obraId: obraId,
-      centro: centro,
-      descricao: l.descricao,
-      valor: l.valor,
-      data: l.data,
-      fornecedor: l.fornecedorCliente || "",
-    });
   });
 
   const allCentros = new Set([...Object.keys(centroOrcado), ...Object.keys(centroRealizado)]);
-  const centros: CentroCustoItem[] = Array.from(allCentros).map((centro) => ({
-    obraId,
+  return Array.from(allCentros).map((centro) => ({
+    obra_id: obraId,
     centro,
     orcado: Math.round((centroOrcado[centro] || 0) * 100) / 100,
     realizado: Math.round((centroRealizado[centro] || 0) * 100) / 100,
   }));
-
-  return { centros, despesas };
 }
 
-// ─── Sync Orçado x Realizado for a single obra ─────────────────────────────
-
-function syncOrcadoRealizadoForObra(
+function computeOrcadoRealizado(
   obraId: string,
   orcamentos: SyncOrcamento[],
   lancamentos: SyncLancamento[]
 ): OrcadoRealizadoItem[] {
-  const obraOrcamentos = orcamentos.filter((o) => o.obraId === obraId);
+  const obraOrcamentos = orcamentos.filter((o) => o.obra_id === obraId);
   const obraLancamentos = lancamentos.filter(
-    (l) => l.obraId === obraId && l.tipo === "DESPESA" && l.status === "PAGO"
+    (l) => l.obra_id === obraId && l.tipo === "DESPESA" && l.status === "PAGO"
   );
 
   const planejado: Record<string, number> = {};
   CATEGORIAS_ORCADO_REALIZADO.forEach((cat) => { planejado[cat] = 0; });
 
   obraOrcamentos.forEach((orc) => {
-    const fator = orc.fatorRegional || 1;
+    const fator = orc.fator_regional || 1;
     const breakdown = computeOrcamentoCostBreakdown(orc);
-
     planejado["Materiais"] += breakdown.custoMateriais * fator;
     planejado["Mao de Obra"] += breakdown.custoMaoDeObra * fator;
     planejado["Equipamentos"] += breakdown.custoEquipamentos * fator;
 
-    const valorEncargos = orc.valorEncargos || 0;
-    const valorBdi = orc.valorBdi || 0;
-    const valorContingencia = orc.valorContingencia || 0;
+    const valorEncargos = orc.valor_encargos || 0;
+    const valorBdi = orc.valor_bdi || 0;
+    const valorContingencia = orc.valor_contingencia || 0;
     planejado["Administracao"] += valorEncargos + valorBdi + valorContingencia;
   });
 
@@ -280,64 +206,63 @@ function syncOrcadoRealizadoForObra(
   });
 
   return CATEGORIAS_ORCADO_REALIZADO.map((cat) => ({
-    obraId,
+    obra_id: obraId,
     categoria: cat,
     planejado: Math.round((planejado[cat] || 0) * 100) / 100,
     realizado: Math.round((realizado[cat] || 0) * 100) / 100,
   }));
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
+// ---- Public API ----
 
-export function syncAllForObra(obraId: string): void {
-  if (typeof window === "undefined" || !obraId) return;
+export async function syncAllForObra(obraId: string): Promise<void> {
+  if (!obraId) return;
 
-  const orcamentos = getOrcamentos();
-  const lancamentos = getLancamentos();
+  const supabase = createClient();
 
-  const existingCC = readStorage<{ centros: CentroCustoItem[]; despesas: DespesaDetalhe[] }>(CENTRO_CUSTOS_KEY);
-  const otherCentros = (existingCC?.centros || []).filter((c) => c.obraId !== obraId);
-  const otherDespesas = (existingCC?.despesas || []).filter((d) => d.obraId !== obraId);
+  // Fetch data from DB
+  const [orcRes, lancRes] = await Promise.all([
+    supabase.from("orcamentos").select("*").eq("obra_id", obraId),
+    supabase.from("lancamentos").select("*"),
+  ]);
 
-  const { centros: newCentros, despesas: newDespesas } = syncCentroCustosForObra(obraId, orcamentos, lancamentos);
+  const orcamentos = (orcRes.data || []) as unknown as SyncOrcamento[];
+  const lancamentos = (lancRes.data || []) as unknown as SyncLancamento[];
 
-  writeStorage(CENTRO_CUSTOS_KEY, {
-    centros: [...otherCentros, ...newCentros],
-    despesas: [...otherDespesas, ...newDespesas],
-  });
+  // Compute
+  const centros = computeCentroCustos(obraId, orcamentos, lancamentos);
+  const orcadoRealizado = computeOrcadoRealizado(obraId, orcamentos, lancamentos);
 
-  const existingOR = readStorage<OrcadoRealizadoItem[]>(ORCADO_REALIZADO_KEY) || [];
-  const otherOR = existingOR.filter((item) => item.obraId !== obraId);
-  const newOR = syncOrcadoRealizadoForObra(obraId, orcamentos, lancamentos);
+  // Delete existing for this obra, then insert new
+  await supabase.from("centro_custos").delete().eq("obra_id", obraId);
+  if (centros.length > 0) {
+    await supabase.from("centro_custos").insert(centros);
+  }
 
-  writeStorage(ORCADO_REALIZADO_KEY, [...otherOR, ...newOR]);
+  await supabase.from("orcado_realizado").delete().eq("obra_id", obraId);
+  if (orcadoRealizado.length > 0) {
+    await supabase.from("orcado_realizado").insert(orcadoRealizado);
+  }
 }
 
-export function syncAll(): void {
-  if (typeof window === "undefined") return;
+export async function syncAll(): Promise<void> {
+  const supabase = createClient();
 
-  const obras = getObras();
-  const orcamentos = getOrcamentos();
-  const lancamentos = getLancamentos();
+  // Get all obra IDs from multiple sources
+  const [obrasRes, orcRes, lancRes] = await Promise.all([
+    supabase.from("obras").select("id"),
+    supabase.from("orcamentos").select("obra_id"),
+    supabase.from("lancamentos").select("obra_id"),
+  ]);
 
   const obraIds = new Set<string>();
-  obras.forEach((o) => obraIds.add(o.id));
-  orcamentos.forEach((o) => { if (o.obraId) obraIds.add(o.obraId); });
-  lancamentos.forEach((l) => { if (l.obraId) obraIds.add(l.obraId); });
+  (obrasRes.data || []).forEach((o: any) => obraIds.add(o.id));
+  (orcRes.data || []).forEach((o: any) => { if (o.obra_id) obraIds.add(o.obra_id); });
+  (lancRes.data || []).forEach((l: any) => { if (l.obra_id) obraIds.add(l.obra_id); });
 
-  const allCentros: CentroCustoItem[] = [];
-  const allDespesas: DespesaDetalhe[] = [];
-  const allOR: OrcadoRealizadoItem[] = [];
-
-  obraIds.forEach((obraId) => {
-    const { centros, despesas } = syncCentroCustosForObra(obraId, orcamentos, lancamentos);
-    allCentros.push(...centros);
-    allDespesas.push(...despesas);
-
-    const orItems = syncOrcadoRealizadoForObra(obraId, orcamentos, lancamentos);
-    allOR.push(...orItems);
-  });
-
-  writeStorage(CENTRO_CUSTOS_KEY, { centros: allCentros, despesas: allDespesas });
-  writeStorage(ORCADO_REALIZADO_KEY, allOR);
+  // Sync each obra
+  for (const obraId of Array.from(obraIds)) {
+    await syncAllForObra(obraId);
+  }
 }
+

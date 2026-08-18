@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Plus, ChevronRight, Package, DollarSign, Clock, CheckCircle2, Truck, CreditCard, Filter, ArrowRight } from "lucide-react";
 import { useObras, useFornecedores } from "@/hooks/use-storage-data";
-import { generateId } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ModuleGuard } from "@/components/module-guard";
@@ -47,8 +47,6 @@ interface Compra {
   criadoEm: string;
 }
 
-const STORAGE_KEY = "smart-obra-compras";
-
 const STATUS_CONFIG: Record<CompraStatus, { label: string; color: string; icon: React.ElementType }> = {
   SOLICITACAO: { label: "Solicitacao", color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300", icon: Clock },
   COTACAO: { label: "Cotacao", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300", icon: DollarSign },
@@ -60,17 +58,8 @@ const STATUS_CONFIG: Record<CompraStatus, { label: string; color: string; icon: 
 
 const STATUS_ORDER: CompraStatus[] = ["SOLICITACAO", "COTACAO", "APROVACAO", "PEDIDO", "RECEBIMENTO", "PAGAMENTO"];
 
-function getCompras(): Compra[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-function saveCompras(compras: Compra[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(compras));
-}
-
 export default function ComprasPage() {
+  const supabase = createClient();
   const { obras } = useObras();
   const { fornecedores } = useFornecedores();
   const [compras, setCompras] = useState<Compra[]>([]);
@@ -93,61 +82,148 @@ export default function ComprasPage() {
   const [cotFornecedorId, setCotFornecedorId] = useState("");
   const [cotValor, setCotValor] = useState("");
 
-  useEffect(() => { setCompras(getCompras()); }, []);
+  useEffect(() => {
+    const fetchCompras = async () => {
+      const { data, error } = await supabase
+        .from("compras")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) { console.error(error); return; }
+      setCompras(
+        (data || []).map((d: any) => ({
+          id: d.id,
+          item: d.item,
+          quantidade: d.quantidade,
+          unidade: d.unidade,
+          obraId: d.obra_id,
+          obraNome: d.obra_nome,
+          fornecedorId: d.fornecedor_id,
+          fornecedorNome: d.fornecedor_nome,
+          valorUnitario: d.valor_unitario,
+          valorTotal: d.valor_total,
+          status: d.status,
+          cotacoes: d.cotacoes || [],
+          dataSolicitacao: d.data_solicitacao,
+          dataCotacao: d.data_cotacao,
+          dataAprovacao: d.data_aprovacao,
+          dataPedido: d.data_pedido,
+          dataRecebimento: d.data_recebimento,
+          dataPagamento: d.data_pagamento,
+          observacoes: d.observacoes,
+          criadoEm: d.created_at,
+        }))
+      );
+    };
+    fetchCompras();
+  }, []);
 
-  const handleNovaSolicitacao = () => {
+  const handleNovaSolicitacao = async () => {
     if (!formItem || !formQuantidade || !formObraId) return;
     const obra = obras.find((o) => o.id === formObraId);
     const fornecedor = fornecedores.find((f) => f.id === formFornecedorId);
     const qtd = parseFloat(formQuantidade);
     const valorUnit = parseFloat(formValorUnitario) || 0;
+
+    const { data, error } = await supabase
+      .from("compras")
+      .insert({
+        item: formItem,
+        quantidade: qtd,
+        unidade: formUnidade,
+        obra_id: formObraId,
+        obra_nome: obra?.nome || "",
+        fornecedor_id: formFornecedorId,
+        fornecedor_nome: fornecedor?.nome || "",
+        valor_unitario: valorUnit,
+        valor_total: qtd * valorUnit,
+        status: "SOLICITACAO",
+        cotacoes: [],
+        data_solicitacao: new Date().toISOString().split("T")[0],
+        observacoes: formObs,
+      } as any)
+      .select()
+      .single() as any;
+
+    if (error) { console.error(error); return; }
+
+    const d = data as any;
     const novaCompra: Compra = {
-      id: generateId(),
-      item: formItem,
-      quantidade: qtd,
-      unidade: formUnidade,
-      obraId: formObraId,
-      obraNome: obra?.nome || "",
-      fornecedorId: formFornecedorId,
-      fornecedorNome: fornecedor?.nome || "",
-      valorUnitario: valorUnit,
-      valorTotal: qtd * valorUnit,
-      status: "SOLICITACAO",
-      cotacoes: [],
-      dataSolicitacao: new Date().toISOString().split("T")[0],
-      observacoes: formObs,
-      criadoEm: new Date().toISOString(),
+      id: d.id,
+      item: d.item,
+      quantidade: d.quantidade,
+      unidade: d.unidade,
+      obraId: d.obra_id,
+      obraNome: d.obra_nome,
+      fornecedorId: d.fornecedor_id,
+      fornecedorNome: d.fornecedor_nome,
+      valorUnitario: d.valor_unitario,
+      valorTotal: d.valor_total,
+      status: d.status,
+      cotacoes: d.cotacoes || [],
+      dataSolicitacao: d.data_solicitacao,
+      dataCotacao: d.data_cotacao,
+      dataAprovacao: d.data_aprovacao,
+      dataPedido: d.data_pedido,
+      dataRecebimento: d.data_recebimento,
+      dataPagamento: d.data_pagamento,
+      observacoes: d.observacoes,
+      criadoEm: d.created_at,
     };
-    const updated = [...compras, novaCompra];
-    saveCompras(updated);
-    setCompras(updated);
+
+    setCompras((prev) => [novaCompra, ...prev]);
     setFormItem(""); setFormQuantidade(""); setFormUnidade("un"); setFormObraId(""); setFormFornecedorId(""); setFormValorUnitario(""); setFormObs("");
     setNovaCompraOpen(false);
   };
 
-  const avancarStatus = (compraId: string) => {
-    const updated = compras.map((c) => {
-      if (c.id !== compraId) return c;
-      const currentIdx = STATUS_ORDER.indexOf(c.status);
-      if (currentIdx >= STATUS_ORDER.length - 1) return c;
-      const nextStatus = STATUS_ORDER[currentIdx + 1];
-      const dateKey = `data${nextStatus.charAt(0) + nextStatus.slice(1).toLowerCase()}` as keyof Compra;
-      return { ...c, status: nextStatus, [dateKey]: new Date().toISOString().split("T")[0] };
-    });
-    saveCompras(updated);
-    setCompras(updated);
+  const avancarStatus = async (compraId: string) => {
+    const compra = compras.find((c) => c.id === compraId);
+    if (!compra) return;
+    const currentIdx = STATUS_ORDER.indexOf(compra.status);
+    if (currentIdx >= STATUS_ORDER.length - 1) return;
+    const nextStatus = STATUS_ORDER[currentIdx + 1];
+    const dateKey = `data${nextStatus.charAt(0) + nextStatus.slice(1).toLowerCase()}` as keyof Compra;
+    const dateValue = new Date().toISOString().split("T")[0];
+
+    const snakeDateKey = `data_${nextStatus.toLowerCase()}`;
+    const { error } = await supabase
+      .from("compras")
+      .update({ status: nextStatus, [snakeDateKey]: dateValue } as any)
+      .eq("id", compraId);
+
+    if (error) { console.error(error); return; }
+
+    setCompras((prev) =>
+      prev.map((c) =>
+        c.id !== compraId ? c : { ...c, status: nextStatus, [dateKey]: dateValue }
+      )
+    );
   };
 
-  const addCotacao = (compraId: string) => {
+  const addCotacao = async (compraId: string) => {
     if (!cotFornecedorId || !cotValor) return;
     const fornecedor = fornecedores.find((f) => f.id === cotFornecedorId);
-    const updated = compras.map((c) => {
-      if (c.id !== compraId) return c;
-      if (c.cotacoes.length >= 3) return c;
-      return { ...c, cotacoes: [...c.cotacoes, { fornecedorId: cotFornecedorId, fornecedorNome: fornecedor?.nome || cotFornecedorId, valor: parseFloat(cotValor) }] };
-    });
-    saveCompras(updated);
-    setCompras(updated);
+    const compra = compras.find((c) => c.id === compraId);
+    if (!compra || compra.cotacoes.length >= 3) return;
+
+    const novaCotacao: Cotacao = {
+      fornecedorId: cotFornecedorId,
+      fornecedorNome: fornecedor?.nome || cotFornecedorId,
+      valor: parseFloat(cotValor),
+    };
+    const novasCotacoes = [...compra.cotacoes, novaCotacao];
+
+    const { error } = await supabase
+      .from("compras")
+      .update({ cotacoes: novasCotacoes } as any)
+      .eq("id", compraId);
+
+    if (error) { console.error(error); return; }
+
+    setCompras((prev) =>
+      prev.map((c) =>
+        c.id !== compraId ? c : { ...c, cotacoes: novasCotacoes }
+      )
+    );
     setCotFornecedorId("");
     setCotValor("");
   };

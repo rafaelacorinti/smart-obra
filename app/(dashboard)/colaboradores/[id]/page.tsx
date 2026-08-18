@@ -169,7 +169,7 @@ export default function ColaboradorDetailPage() {
     { key: "tipo", label: "Tipo", render: (d: DocumentoColaborador) => <span className="font-medium">{d.tipo}</span> },
     { key: "nome", label: "Nome" },
     { key: "validade", label: "Validade", render: (d: DocumentoColaborador) => d.validade ? fmtDate(d.validade) : "-" },
-    { key: "criadoEm", label: "Adicionado em", render: (d: DocumentoColaborador) => fmtDate(d.criadoEm) },
+    { key: "criadoEm", label: "Adicionado em", render: (d: DocumentoColaborador) => fmtDate(d.criadoEm || "") },
   ];
 
   return (

@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { registerUser } from "@/lib/mock-store";
+﻿import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -13,21 +13,48 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = registerUser({
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+
+    if (authError) {
+      return NextResponse.json(
+        { error: authError.message },
+        { status: 500 }
+      );
+    }
+
+    // Create user profile
+    const { error: profileError } = await supabaseAdmin
+      .from("user_profiles")
+      .insert({
+        id: authData.user.id,
+        name,
+        email,
+        role: "GESTOR",
+        company_name: companyName || null,
+        active: true,
+        allowed_modules: [],
+      });
+
+    if (profileError) {
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      return NextResponse.json(
+        { error: profileError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      id: authData.user.id,
       name,
       email,
-      password,
-      companyName: companyName || "",
     });
-
-    return NextResponse.json(
-      { message: "Usuario registrado com sucesso", user: { id: user.id, name: user.name, email: user.email } },
-      { status: 201 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Erro ao registrar usuario" },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

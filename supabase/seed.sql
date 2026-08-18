@@ -1,0 +1,23 @@
+﻿-- ============================================================
+-- Seed: Create admin user after running Supabase Auth create user
+-- Run AFTER creating the admin user via Supabase Dashboard or CLI:
+--   supabase auth admin create-user --email admin@smartobra.com --password admin123
+-- Then copy the user ID and replace below:
+-- ============================================================
+
+-- Replace 'YOUR_ADMIN_AUTH_UUID' with the actual UUID from Supabase Auth
+-- INSERT INTO user_profiles (id, name, email, role, company_name, active, allowed_modules)
+-- VALUES (
+--   'YOUR_ADMIN_AUTH_UUID',
+--   'Administrador',
+--   'admin@smartobra.com',
+--   'ADMIN',
+--   'Smart Obra',
+--   true,
+--   '["obras","financeiro","orcamentos","ordens-servico","colaboradores","estoque","veiculos","clientes","cronograma","diario-obra","galeria","compras","documentos","centro-custos","orcado-realizado","relatorios","dashboard","ia","configuracoes"]'::jsonb
+-- );
+
+-- Alternative: Use the API to create the admin
+-- POST /api/users/register with { name: "Administrador", email: "admin@smartobra.com", password: "admin123", companyName: "Smart Obra" }
+-- Then manually update the role to ADMIN:
+-- UPDATE user_profiles SET role = 'ADMIN' WHERE email = 'admin@smartobra.com';

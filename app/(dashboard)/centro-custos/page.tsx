@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Layers, ArrowLeft, ChevronRight,
 } from "lucide-react";
@@ -15,6 +15,7 @@ import { useObras } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
 import { syncAll } from "@/lib/sync-modules";
 import { ModuleGuard } from "@/components/module-guard";
+import { createClient } from "@/lib/supabase/client";
 
 const COLORS = ["#1e40af", "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 
@@ -38,17 +39,6 @@ interface DespesaDetalhe {
   valor: number;
   data: string;
   fornecedor: string;
-}
-
-const STORAGE_KEY = "smart-obra-centro-custos";
-
-function getInitialData(): { centros: CentroCustoItem[]; despesas: DespesaDetalhe[] } {
-  if (typeof window === "undefined") return { centros: [], despesas: [] };
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try { return JSON.parse(raw); } catch { /* fall through */ }
-  }
-  return { centros: [], despesas: [] };
 }
 
 function getProgressColor(pct: number): string {
@@ -85,22 +75,73 @@ function CustomTreemapContent({ x = 0, y = 0, width = 0, height = 0, name = "", 
 export default function CentroCustosPage() {
   const { obras, loading: loadingObras } = useObras();
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [selectedObra, setSelectedObra] = useState<string>("all");
-  const [data, setData] = useState<{ centros: CentroCustoItem[]; despesas: DespesaDetalhe[] }>({ centros: [], despesas: [] });
+  const [centros, setCentros] = useState<CentroCustoItem[]>([]);
+  const [despesas, setDespesas] = useState<DespesaDetalhe[]>([]);
   const [drillDown, setDrillDown] = useState<string | null>(null);
+
+  const selectedObraId = selectedObra;
+
+  const loadData = useCallback(async () => {
+    if (!selectedObraId) return;
+    try {
+      setLoading(true);
+      await syncAll();
+      const supabase = createClient();
+      const { data: centrosData } = await supabase
+        .from("centro_custos")
+        .select("*")
+        .eq("obra_id", selectedObraId);
+
+      const { data: despesasData } = await supabase
+        .from("lancamentos")
+        .select("*")
+        .eq("obra_id", selectedObraId)
+        .eq("tipo", "DESPESA")
+        .eq("status", "PAGO");
+
+      // Map centros to the expected format
+      setCentros((centrosData || []).map((c: any) => ({
+        obraId: c.obra_id,
+        centro: c.centro,
+        orcado: Number(c.orcado),
+        realizado: Number(c.realizado),
+      })));
+
+      // Map lancamentos to despesas format
+      setDespesas((despesasData || []).map((d: any) => ({
+        id: d.id,
+        obraId: d.obra_id,
+        centro: d.categoria || "Outros",
+        descricao: d.descricao || "",
+        valor: Number(d.valor),
+        data: d.data || "",
+        fornecedor: d.fornecedor_cliente || "",
+      })));
+    } catch (error) {
+      console.error("Erro ao carregar centro de custos:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedObraId]);
 
   useEffect(() => {
     setMounted(true);
-    syncAll();
-    setData(getInitialData());
   }, []);
 
-  const loading = !mounted || loadingObras;
+  useEffect(() => {
+    if (mounted && selectedObraId !== "all") {
+      loadData();
+    }
+  }, [mounted, loadData, selectedObraId]);
+
+  const isLoading = !mounted || loadingObras || loading;
 
   const filteredCentros = useMemo(() => {
     if (selectedObra === "all") {
       const grouped: Record<string, { orcado: number; realizado: number }> = {};
-      data.centros.forEach((c) => {
+      centros.forEach((c) => {
         if (!grouped[c.centro]) grouped[c.centro] = { orcado: 0, realizado: 0 };
         grouped[c.centro].orcado += c.orcado;
         grouped[c.centro].realizado += c.realizado;
@@ -111,26 +152,26 @@ export default function CentroCustosPage() {
         realizado: grouped[centro]?.realizado || 0,
       })).filter((c) => c.orcado > 0 || c.realizado > 0);
     }
-    return data.centros
+    return centros
       .filter((c) => c.obraId === selectedObra)
       .map((c) => ({ centro: c.centro, orcado: c.orcado, realizado: c.realizado }))
       .filter((c) => c.orcado > 0 || c.realizado > 0);
-  }, [data, selectedObra]);
+  }, [centros, selectedObra]);
 
   const filteredDespesas = useMemo(() => {
     if (!drillDown) return [];
-    return data.despesas.filter((d) => {
+    return despesas.filter((d) => {
       const centroMatch = d.centro === drillDown;
       const obraMatch = selectedObra === "all" || d.obraId === selectedObra;
       return centroMatch && obraMatch;
     });
-  }, [data, drillDown, selectedObra]);
+  }, [despesas, drillDown, selectedObra]);
 
   const pieData = filteredCentros.map((c) => ({ name: c.centro, value: c.realizado })).filter((d) => d.value > 0);
 
   const treemapData = filteredCentros.filter((c) => c.orcado > 0).map((c) => ({ name: c.centro, size: c.orcado }));
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div>
         <PageHeader title="Centro de Custos" />

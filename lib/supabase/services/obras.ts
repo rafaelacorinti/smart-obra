@@ -1,0 +1,76 @@
+﻿import { createClient } from "@/lib/supabase/client";
+import { toCamelCase, toSnakeCase } from "@/lib/supabase/utils";
+
+export async function getObras() {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("obras")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((d: any) => toCamelCase(d));
+}
+
+export async function getObraById(id: string) {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("obras")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return toCamelCase(data as any);
+}
+
+export async function createObra(obra: any) {
+  const supabase = createClient();
+  const dbData = toSnakeCase(obra);
+  delete dbData.id;
+  delete dbData.created_at;
+  delete dbData.criado_em;
+  const { data, error } = await supabase
+    .from("obras")
+    .insert(dbData)
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamelCase(data as any);
+}
+
+export async function updateObra(id: string, updates: any) {
+  const supabase = createClient();
+  const dbData = toSnakeCase(updates);
+  delete dbData.id;
+  delete dbData.created_at;
+  const { data, error } = await supabase
+    .from("obras")
+    .update(dbData)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return toCamelCase(data as any);
+}
+
+export async function deleteObra(id: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("obras").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteObraCascade(id: string) {
+  const supabase = createClient();
+  // Child tables with ON DELETE CASCADE will auto-delete
+  // But some have ON DELETE SET NULL, so we explicitly clean up
+  const cascadeTables = [
+    "colaboradores_obra", "materiais_obra", "diario_obra",
+    "timeline_obra", "documentos_obra", "fotos_obra"
+  ];
+  for (const table of cascadeTables) {
+    await supabase.from(table).delete().eq("obra_id", id);
+  }
+  // lancamentos, ordens_servico, movimentacoes_estoque have SET NULL
+  // orcamentos has CASCADE
+  const { error } = await supabase.from("obras").delete().eq("id", id);
+  if (error) throw error;
+}

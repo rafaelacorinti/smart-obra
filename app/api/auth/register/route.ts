@@ -1,28 +1,36 @@
-import { NextResponse } from "next/server";
-import { addAccessRequest } from "@/lib/mock-store";
+﻿import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { name, email, phone, companyName, cnpj } = body;
 
-    if (!name || !email || !phone || !companyName || !cnpj) {
+    if (!name || !email) {
       return NextResponse.json(
-        { error: "Todos os campos sao obrigatorios" },
+        { error: "Nome e email sao obrigatorios" },
         { status: 400 }
       );
     }
 
-    const newRequest = addAccessRequest({ name, email, phone, companyName, cnpj });
+    // Create as access request (will be approved by admin)
+    const { data, error } = await supabaseAdmin
+      .from("access_requests")
+      .insert({
+        nome: name,
+        email,
+        telefone: phone || null,
+        empresa: companyName || null,
+        cargo: null,
+        mensagem: cnpj ? "CNPJ: " + cnpj : null,
+        status: "pendente",
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(
-      { message: "Solicitacao enviada com sucesso", request: newRequest },
-      { status: 201 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Erro ao processar solicitacao" },
-      { status: 500 }
-    );
+    if (error) throw error;
+    return NextResponse.json(data, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

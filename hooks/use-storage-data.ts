@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { StorageService, generateId } from "@/lib/storage";
 import {
   Obra, DiarioObra, FotoObra, DocumentoObra, TimelineObra,
   ColaboradorObra, MaterialObra, LancamentoFinanceiro, OrdemServico,
@@ -11,723 +10,856 @@ import {
   Orcamento, Cliente, DocumentoCliente,
 } from "@/lib/mock-data";
 
-// Storage instances
-const obrasStorage = new StorageService<Obra>("smart-obra-obras");
-const lancamentosStorage = new StorageService<LancamentoFinanceiro>("smart-obra-lancamentos");
-const ordensStorage = new StorageService<OrdemServico>("smart-obra-ordens");
-const colaboradoresStorage = new StorageService<Colaborador>("smart-obra-colaboradores");
-const colaboradoresObraStorage = new StorageService<ColaboradorObra>("smart-obra-colaboradores-obra");
-const materiaisObraStorage = new StorageService<MaterialObra>("smart-obra-materiais-obra");
-const diarioStorage = new StorageService<DiarioObra>("smart-obra-diario");
-const timelineStorage = new StorageService<TimelineObra>("smart-obra-timeline");
-const documentosStorage = new StorageService<DocumentoObra>("smart-obra-documentos");
-const eventosStorage = new StorageService<EventoCalendario>("smart-obra-eventos");
-const fotosStorage = new StorageService<FotoObra>("smart-obra-fotos");
-const presencasStorage = new StorageService<PresencaColaborador>("smart-obra-presencas");
-const pagamentosColabStorage = new StorageService<PagamentoColaborador>("smart-obra-pagamentos-colab");
-const documentosColabStorage = new StorageService<DocumentoColaborador>("smart-obra-documentos-colab");
-const materiaisEstoqueStorage = new StorageService<MaterialEstoque>("smart-obra-materiais-estoque");
-const movimentacoesStorage = new StorageService<MovimentacaoEstoque>("smart-obra-movimentacoes");
-const fornecedoresStorage = new StorageService<Fornecedor>("smart-obra-fornecedores");
-const veiculosStorage = new StorageService<Veiculo>("smart-obra-veiculos");
-const manutencoesVeiculoStorage = new StorageService<ManutencaoVeiculo>("smart-obra-manutencoes-veiculo");
-const abastecimentosVeiculoStorage = new StorageService<AbastecimentoVeiculo>("smart-obra-abastecimentos-veiculo");
-const documentosVeiculoStorage = new StorageService<DocumentoVeiculo>("smart-obra-documentos-veiculo");
-const orcamentosStorage = new StorageService<Orcamento>("smart-obra-orcamentos");
-const clientesStorage = new StorageService<Cliente>("smart-obra-clientes");
-const documentosClienteStorage = new StorageService<DocumentoCliente>("smart-obra-documentos-cliente");
+// Service imports
+import { getObras, createObra, updateObra, deleteObra, deleteObraCascade } from "@/lib/supabase/services/obras";
+import { getLancamentos, createLancamento, updateLancamento, deleteLancamento } from "@/lib/supabase/services/lancamentos";
+import { getOrdensServico, createOrdemServico, updateOrdemServico, deleteOrdemServico } from "@/lib/supabase/services/ordens-servico";
+import { getColaboradores, createColaborador, updateColaborador, deleteColaborador } from "@/lib/supabase/services/colaboradores";
+import { getPresencas, createPresenca } from "@/lib/supabase/services/presencas";
+import { getPagamentos, createPagamento, updatePagamento } from "@/lib/supabase/services/pagamentos";
+import { getDocumentosColaborador, createDocumentoColaborador } from "@/lib/supabase/services/documentos-colaborador";
+import { getMateriaisEstoque, createMaterialEstoque, updateMaterialEstoque, deleteMaterialEstoque } from "@/lib/supabase/services/materiais-estoque";
+import { getMovimentacoes, createMovimentacao } from "@/lib/supabase/services/movimentacoes";
+import { getFornecedores, createFornecedor, updateFornecedor, deleteFornecedor } from "@/lib/supabase/services/fornecedores";
+import { getColaboradoresObra, addColaboradorObra, removeColaboradorObra } from "@/lib/supabase/services/colaboradores-obra";
+import { getMateriaisObra, addMaterialObra } from "@/lib/supabase/services/materiais-obra";
+import { getDiarioObra, addDiarioObra } from "@/lib/supabase/services/diario-obra";
+import { getTimelineObra, addTimelineObra } from "@/lib/supabase/services/timeline-obra";
+import { getDocumentosObra, addDocumentoObra } from "@/lib/supabase/services/documentos-obra";
+import { getFotosObra, addFotoObra } from "@/lib/supabase/services/fotos-obra";
+import { getEventosCalendario } from "@/lib/supabase/services/eventos-calendario";
+import { getVeiculos, createVeiculo, updateVeiculo, deleteVeiculo } from "@/lib/supabase/services/veiculos";
+import { getManutencoesVeiculo, createManutencaoVeiculo } from "@/lib/supabase/services/manutencoes-veiculo";
+import { getAbastecimentosVeiculo, createAbastecimentoVeiculo } from "@/lib/supabase/services/abastecimentos-veiculo";
+import { getDocumentosVeiculo, createDocumentoVeiculo } from "@/lib/supabase/services/documentos-veiculo";
+import { getOrcamentos as getOrcamentosService, createOrcamento as createOrcamentoService, updateOrcamento as updateOrcamentoService, deleteOrcamento as deleteOrcamentoService } from "@/lib/supabase/services/orcamentos";
+import { getClientes as getClientesService, createCliente as createClienteService, updateCliente as updateClienteService, deleteCliente as deleteClienteService } from "@/lib/supabase/services/clientes";
+import { getDocumentosCliente, createDocumentoCliente } from "@/lib/supabase/services/documentos-cliente";
 
+// ============================================================
+// useObras
+// ============================================================
 export function useObras() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setObras(obrasStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getObras();
+      setObras(data as unknown as Obra[]);
+    } catch (err) {
+      console.error("Erro ao carregar obras:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setObras(obrasStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createObra = useCallback((obra: Omit<Obra, "id" | "criadoEm">) => {
-    const newObra: Obra = { ...obra, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    obrasStorage.create(newObra);
-    refresh();
-    return newObra;
+  const create = useCallback(async (obra: Omit<Obra, "id">) => {
+    const created = await createObra(obra);
+    await refresh();
+    return created as unknown as Obra;
   }, [refresh]);
 
-  const updateObra = useCallback((id: string, updates: Partial<Obra>) => {
-    obrasStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<Obra>) => {
+    const updated = await updateObra(id, updates);
+    await refresh();
+    return updated as unknown as Obra;
   }, [refresh]);
 
-  const deleteObra = useCallback((id: string) => {
-    obrasStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteObra(id);
+    await refresh();
   }, [refresh]);
 
-  const deleteObraCascade = useCallback((id: string) => {
-    // Delete obra
-    obrasStorage.delete(id);
-    
-    // Delete from storage instances
-    const storages = [
-      lancamentosStorage, ordensStorage, colaboradoresObraStorage,
-      materiaisObraStorage, diarioStorage, timelineStorage,
-      documentosStorage, fotosStorage
-    ];
-    storages.forEach((storage) => {
-      const all = storage.getAll();
-      all.filter((item: any) => item.obraId === id).forEach((item: any) => storage.delete(item.id));
-    });
-
-    // Delete from inline localStorage keys
-    const inlineKeys = [
-      "smart-obra-compras", "smart-obra-centro-custos", "smart-obra-cronograma",
-      "smart-obra-documents", "smart-obra-galeria", "smart-obra-orcado-realizado"
-    ];
-    inlineKeys.forEach((key) => {
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const data = JSON.parse(raw);
-          if (Array.isArray(data)) {
-            const filtered = data.filter((item: any) => item.obraId !== id);
-            localStorage.setItem(key, JSON.stringify(filtered));
-          }
-        }
-      } catch {}
-    });
-
-    // Also delete orcamentos linked to this obra
-    const allOrcamentos = orcamentosStorage.getAll();
-    allOrcamentos.filter((o: any) => o.obraId === id).forEach((o: any) => orcamentosStorage.delete(o.id));
-    
-    refresh();
+  const removeCascade = useCallback(async (id: string) => {
+    await deleteObraCascade(id);
+    await refresh();
   }, [refresh]);
 
-  return { obras, loading, createObra, updateObra, deleteObra, deleteObraCascade, refresh };
+  return { obras, loading, create, update, delete: remove, createObra: create, updateObra: update, deleteObra: remove, deleteObraCascade: removeCascade, refresh };
 }
 
+// ============================================================
+// useLancamentos
+// ============================================================
 export function useLancamentos(obraId?: string) {
   const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = lancamentosStorage.getAll();
-    setLancamentos(obraId ? all.filter((l) => l.obraId === obraId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getLancamentos(obraId);
+      setLancamentos(data as unknown as LancamentoFinanceiro[]);
+    } catch (err) {
+      console.error("Erro ao carregar lancamentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [obraId]);
 
-  const refresh = useCallback(() => {
-    const all = lancamentosStorage.getAll();
-    setLancamentos(obraId ? all.filter((l) => l.obraId === obraId) : all);
-  }, [obraId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createLancamento = useCallback((lancamento: Omit<LancamentoFinanceiro, "id" | "criadoEm">) => {
-    const newItem: LancamentoFinanceiro = { ...lancamento, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    lancamentosStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (lancamento: Omit<LancamentoFinanceiro, "id">) => {
+    const created = await createLancamento(lancamento);
+    await refresh();
+    return created as unknown as LancamentoFinanceiro;
   }, [refresh]);
 
-  const updateLancamento = useCallback((id: string, updates: Partial<LancamentoFinanceiro>) => {
-    lancamentosStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<LancamentoFinanceiro>) => {
+    const updated = await updateLancamento(id, updates);
+    await refresh();
+    return updated as unknown as LancamentoFinanceiro;
   }, [refresh]);
 
-  const deleteLancamento = useCallback((id: string) => {
-    lancamentosStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteLancamento(id);
+    await refresh();
   }, [refresh]);
 
-  return { lancamentos, loading, createLancamento, updateLancamento, deleteLancamento, refresh };
+  return { lancamentos, loading, create, update, delete: remove, createLancamento: create, updateLancamento: update, deleteLancamento: remove, refresh };
 }
 
+// ============================================================
+// useOrdensServico
+// ============================================================
 export function useOrdensServico() {
-  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
+  const [ordensServico, setOrdensServico] = useState<OrdemServico[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setOrdens(ordensStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getOrdensServico();
+      setOrdensServico(data as unknown as OrdemServico[]);
+    } catch (err) {
+      console.error("Erro ao carregar ordens de servico:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setOrdens(ordensStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createOrdem = useCallback((ordem: Omit<OrdemServico, "id">) => {
-    const newItem: OrdemServico = { ...ordem, id: generateId() };
-    ordensStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (os: Omit<OrdemServico, "id">) => {
+    const created = await createOrdemServico(os);
+    await refresh();
+    return created as unknown as OrdemServico;
   }, [refresh]);
 
-  const updateOrdem = useCallback((id: string, updates: Partial<OrdemServico>) => {
-    ordensStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<OrdemServico>) => {
+    const updated = await updateOrdemServico(id, updates);
+    await refresh();
+    return updated as unknown as OrdemServico;
   }, [refresh]);
 
-  const deleteOrdem = useCallback((id: string) => {
-    ordensStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteOrdemServico(id);
+    await refresh();
   }, [refresh]);
 
-  return { ordens, loading, createOrdem, updateOrdem, deleteOrdem, refresh };
+  return { ordensServico, ordens: ordensServico, loading, create, update, delete: remove, createOrdem: create, updateOrdem: update, deleteOrdem: remove, refresh };
 }
 
+// ============================================================
+// useColaboradores
+// ============================================================
 export function useColaboradores() {
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setColaboradores(colaboradoresStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getColaboradores();
+      setColaboradores(data as unknown as Colaborador[]);
+    } catch (err) {
+      console.error("Erro ao carregar colaboradores:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setColaboradores(colaboradoresStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createColaborador = useCallback((colab: Omit<Colaborador, "id">) => {
-    const newItem: Colaborador = { ...colab, id: generateId() };
-    colaboradoresStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (colab: Omit<Colaborador, "id">) => {
+    const created = await createColaborador(colab);
+    await refresh();
+    return created as unknown as Colaborador;
   }, [refresh]);
 
-  const updateColaborador = useCallback((id: string, updates: Partial<Colaborador>) => {
-    colaboradoresStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<Colaborador>) => {
+    const updated = await updateColaborador(id, updates);
+    await refresh();
+    return updated as unknown as Colaborador;
   }, [refresh]);
 
-  const deleteColaborador = useCallback((id: string) => {
-    colaboradoresStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteColaborador(id);
+    await refresh();
   }, [refresh]);
 
-  return { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador, refresh };
+  return { colaboradores, loading, create, update, delete: remove, createColaborador: create, updateColaborador: update, deleteColaborador: remove, refresh };
 }
 
+// ============================================================
+// usePresencas
+// ============================================================
 export function usePresencas(colaboradorId?: string) {
   const [presencas, setPresencas] = useState<PresencaColaborador[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = presencasStorage.getAll();
-    setPresencas(colaboradorId ? all.filter((p) => p.colaboradorId === colaboradorId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getPresencas(colaboradorId);
+      setPresencas(data as unknown as PresencaColaborador[]);
+    } catch (err) {
+      console.error("Erro ao carregar presencas:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [colaboradorId]);
 
-  const refresh = useCallback(() => {
-    const all = presencasStorage.getAll();
-    setPresencas(colaboradorId ? all.filter((p) => p.colaboradorId === colaboradorId) : all);
-  }, [colaboradorId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createPresenca = useCallback((presenca: Omit<PresencaColaborador, "id">) => {
-    const newItem: PresencaColaborador = { ...presenca, id: generateId() };
-    presencasStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (presenca: Omit<PresencaColaborador, "id">) => {
+    const created = await createPresenca(presenca);
+    await refresh();
+    return created as unknown as PresencaColaborador;
   }, [refresh]);
 
-  return { presencas, loading, createPresenca, refresh };
+  return { presencas, loading, create, createPresenca: create, refresh };
 }
 
+// ============================================================
+// usePagamentosColaborador
+// ============================================================
 export function usePagamentosColaborador(colaboradorId?: string) {
   const [pagamentos, setPagamentos] = useState<PagamentoColaborador[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = pagamentosColabStorage.getAll();
-    setPagamentos(colaboradorId ? all.filter((p) => p.colaboradorId === colaboradorId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getPagamentos(colaboradorId);
+      setPagamentos(data as unknown as PagamentoColaborador[]);
+    } catch (err) {
+      console.error("Erro ao carregar pagamentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [colaboradorId]);
 
-  const refresh = useCallback(() => {
-    const all = pagamentosColabStorage.getAll();
-    setPagamentos(colaboradorId ? all.filter((p) => p.colaboradorId === colaboradorId) : all);
-  }, [colaboradorId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createPagamento = useCallback((pagamento: Omit<PagamentoColaborador, "id">) => {
-    const newItem: PagamentoColaborador = { ...pagamento, id: generateId() };
-    pagamentosColabStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (pagamento: Omit<PagamentoColaborador, "id">) => {
+    const created = await createPagamento(pagamento);
+    await refresh();
+    return created as unknown as PagamentoColaborador;
   }, [refresh]);
 
-  const updatePagamento = useCallback((id: string, updates: Partial<PagamentoColaborador>) => {
-    pagamentosColabStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<PagamentoColaborador>) => {
+    const updated = await updatePagamento(id, updates);
+    await refresh();
+    return updated as unknown as PagamentoColaborador;
   }, [refresh]);
 
-  return { pagamentos, loading, createPagamento, updatePagamento, refresh };
+  return { pagamentos, loading, create, update, createPagamento: create, updatePagamento: update, refresh };
 }
 
+// ============================================================
+// useDocumentosColaborador
+// ============================================================
 export function useDocumentosColaborador(colaboradorId?: string) {
   const [documentos, setDocumentos] = useState<DocumentoColaborador[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = documentosColabStorage.getAll();
-    setDocumentos(colaboradorId ? all.filter((d) => d.colaboradorId === colaboradorId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getDocumentosColaborador(colaboradorId);
+      setDocumentos(data as unknown as DocumentoColaborador[]);
+    } catch (err) {
+      console.error("Erro ao carregar documentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [colaboradorId]);
 
-  const refresh = useCallback(() => {
-    const all = documentosColabStorage.getAll();
-    setDocumentos(colaboradorId ? all.filter((d) => d.colaboradorId === colaboradorId) : all);
-  }, [colaboradorId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createDocumento = useCallback((doc: Omit<DocumentoColaborador, "id" | "criadoEm">) => {
-    const newItem: DocumentoColaborador = { ...doc, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    documentosColabStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (doc: Omit<DocumentoColaborador, "id">) => {
+    const created = await createDocumentoColaborador(doc);
+    await refresh();
+    return created as unknown as DocumentoColaborador;
   }, [refresh]);
 
-  return { documentos, loading, createDocumento, refresh };
+  return { documentos, loading, create, createDocumento: create, refresh };
 }
 
+// ============================================================
+// useMateriaisEstoque
+// ============================================================
 export function useMateriaisEstoque() {
   const [materiais, setMateriais] = useState<MaterialEstoque[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setMateriais(materiaisEstoqueStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getMateriaisEstoque();
+      setMateriais(data as unknown as MaterialEstoque[]);
+    } catch (err) {
+      console.error("Erro ao carregar materiais:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setMateriais(materiaisEstoqueStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createMaterial = useCallback((material: Omit<MaterialEstoque, "id">) => {
-    const newItem: MaterialEstoque = { ...material, id: generateId() };
-    materiaisEstoqueStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (mat: Omit<MaterialEstoque, "id">) => {
+    const created = await createMaterialEstoque(mat);
+    await refresh();
+    return created as unknown as MaterialEstoque;
   }, [refresh]);
 
-  const updateMaterial = useCallback((id: string, updates: Partial<MaterialEstoque>) => {
-    materiaisEstoqueStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<MaterialEstoque>) => {
+    const updated = await updateMaterialEstoque(id, updates);
+    await refresh();
+    return updated as unknown as MaterialEstoque;
   }, [refresh]);
 
-  const deleteMaterial = useCallback((id: string) => {
-    materiaisEstoqueStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteMaterialEstoque(id);
+    await refresh();
   }, [refresh]);
 
-  return { materiais, loading, createMaterial, updateMaterial, deleteMaterial, refresh };
+  return { materiais, loading, create, update, delete: remove, createMaterial: create, updateMaterial: update, deleteMaterial: remove, refresh };
 }
 
+// ============================================================
+// useMovimentacoes
+// ============================================================
 export function useMovimentacoes() {
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoEstoque[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setMovimentacoes(movimentacoesStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getMovimentacoes();
+      setMovimentacoes(data as unknown as MovimentacaoEstoque[]);
+    } catch (err) {
+      console.error("Erro ao carregar movimentacoes:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setMovimentacoes(movimentacoesStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createMovimentacao = useCallback((mov: Omit<MovimentacaoEstoque, "id">) => {
-    const newItem: MovimentacaoEstoque = { ...mov, id: generateId() };
-    movimentacoesStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (mov: Omit<MovimentacaoEstoque, "id">) => {
+    const created = await createMovimentacao(mov);
+    await refresh();
+    return created as unknown as MovimentacaoEstoque;
   }, [refresh]);
 
-  return { movimentacoes, loading, createMovimentacao, refresh };
+  return { movimentacoes, loading, create, createMovimentacao: create, refresh };
 }
 
+// ============================================================
+// useFornecedores
+// ============================================================
 export function useFornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setFornecedores(fornecedoresStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getFornecedores();
+      setFornecedores(data as unknown as Fornecedor[]);
+    } catch (err) {
+      console.error("Erro ao carregar fornecedores:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setFornecedores(fornecedoresStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createFornecedor = useCallback((forn: Omit<Fornecedor, "id">) => {
-    const newItem: Fornecedor = { ...forn, id: generateId() };
-    fornecedoresStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (fornecedor: Omit<Fornecedor, "id">) => {
+    const created = await createFornecedor(fornecedor);
+    await refresh();
+    return created as unknown as Fornecedor;
   }, [refresh]);
 
-  const updateFornecedor = useCallback((id: string, updates: Partial<Fornecedor>) => {
-    fornecedoresStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<Fornecedor>) => {
+    const updated = await updateFornecedor(id, updates);
+    await refresh();
+    return updated as unknown as Fornecedor;
   }, [refresh]);
 
-  const deleteFornecedor = useCallback((id: string) => {
-    fornecedoresStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteFornecedor(id);
+    await refresh();
   }, [refresh]);
 
-  return { fornecedores, loading, createFornecedor, updateFornecedor, deleteFornecedor, refresh };
+  return { fornecedores, loading, create, update, delete: remove, createFornecedor: create, updateFornecedor: update, deleteFornecedor: remove, refresh };
 }
 
+// ============================================================
+// useColaboradoresObra
+// ============================================================
 export function useColaboradoresObra(obraId: string) {
   const [colaboradores, setColaboradores] = useState<ColaboradorObra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setColaboradores(colaboradoresObraStorage.getAll().filter((c) => c.obraId === obraId));
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getColaboradoresObra(obraId);
+      setColaboradores(data as unknown as ColaboradorObra[]);
+    } catch (err) {
+      console.error("Erro ao carregar colaboradores da obra:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [obraId]);
 
-  const refresh = useCallback(() => {
-    setColaboradores(colaboradoresObraStorage.getAll().filter((c) => c.obraId === obraId));
-  }, [obraId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const addColaborador = useCallback((colab: Omit<ColaboradorObra, "id">) => {
-    const newItem: ColaboradorObra = { ...colab, id: generateId() };
-    colaboradoresObraStorage.create(newItem);
-    refresh();
-  }, [obraId]);
+  const add = useCallback(async (colab: Omit<ColaboradorObra, "id">) => {
+    await addColaboradorObra(colab);
+    await refresh();
+  }, [refresh]);
 
-  const removeColaborador = useCallback((id: string) => {
-    colaboradoresObraStorage.delete(id);
-    refresh();
-  }, [obraId]);
+  const remove = useCallback(async (id: string) => {
+    await removeColaboradorObra(id);
+    await refresh();
+  }, [refresh]);
 
-  return { colaboradores, loading, addColaborador, removeColaborador, refresh };
+  return { colaboradores, loading, add, remove, addColaborador: add, removeColaborador: remove, refresh };
 }
 
+// ============================================================
+// useMateriaisObra
+// ============================================================
 export function useMateriaisObra(obraId: string) {
   const [materiais, setMateriais] = useState<MaterialObra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setMateriais(materiaisObraStorage.getAll().filter((m) => m.obraId === obraId));
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getMateriaisObra(obraId);
+      setMateriais(data as unknown as MaterialObra[]);
+    } catch (err) {
+      console.error("Erro ao carregar materiais da obra:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [obraId]);
 
-  const refresh = useCallback(() => {
-    setMateriais(materiaisObraStorage.getAll().filter((m) => m.obraId === obraId));
-  }, [obraId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const addMaterial = useCallback((material: Omit<MaterialObra, "id">) => {
-    const newItem: MaterialObra = { ...material, id: generateId() };
-    materiaisObraStorage.create(newItem);
-    refresh();
-  }, [obraId]);
+  const add = useCallback(async (mat: Omit<MaterialObra, "id">) => {
+    await addMaterialObra(mat);
+    await refresh();
+  }, [refresh]);
 
-  return { materiais, loading, addMaterial, refresh };
+  return { materiais, loading, add, addMaterial: add, refresh };
 }
 
+// ============================================================
+// useDiarioObra
+// ============================================================
 export function useDiarioObra(obraId: string) {
-  const [entradas, setEntradas] = useState<DiarioObra[]>([]);
+  const [diario, setDiario] = useState<DiarioObra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setEntradas(diarioStorage.getAll().filter((d) => d.obraId === obraId).sort((a, b) => b.data.localeCompare(a.data)));
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getDiarioObra(obraId);
+      setDiario(data as unknown as DiarioObra[]);
+    } catch (err) {
+      console.error("Erro ao carregar diario:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [obraId]);
 
-  const refresh = useCallback(() => {
-    setEntradas(diarioStorage.getAll().filter((d) => d.obraId === obraId).sort((a, b) => b.data.localeCompare(a.data)));
-  }, [obraId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const addEntrada = useCallback((entrada: Omit<DiarioObra, "id" | "criadoEm">) => {
-    const newItem: DiarioObra = { ...entrada, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    diarioStorage.create(newItem);
-    refresh();
-  }, [obraId]);
+  const add = useCallback(async (entry: Omit<DiarioObra, "id">) => {
+    await addDiarioObra(entry);
+    await refresh();
+  }, [refresh]);
 
-  return { entradas, loading, addEntrada, refresh };
+  return { diario, entradas: diario, loading, add, addEntrada: add, refresh };
 }
 
+// ============================================================
+// useTimelineObra
+// ============================================================
 export function useTimelineObra(obraId: string) {
-  const [eventos, setEventos] = useState<TimelineObra[]>([]);
+  const [timeline, setTimeline] = useState<TimelineObra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setEventos(timelineStorage.getAll().filter((t) => t.obraId === obraId).sort((a, b) => b.data.localeCompare(a.data)));
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getTimelineObra(obraId);
+      setTimeline(data as unknown as TimelineObra[]);
+    } catch (err) {
+      console.error("Erro ao carregar timeline:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [obraId]);
 
-  const refresh = useCallback(() => {
-    setEventos(timelineStorage.getAll().filter((t) => t.obraId === obraId).sort((a, b) => b.data.localeCompare(a.data)));
-  }, [obraId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const addEvento = useCallback((evento: Omit<TimelineObra, "id" | "criadoEm">) => {
-    const newItem: TimelineObra = { ...evento, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    timelineStorage.create(newItem);
-    refresh();
-  }, [obraId]);
+  const add = useCallback(async (entry: Omit<TimelineObra, "id">) => {
+    await addTimelineObra(entry);
+    await refresh();
+  }, [refresh]);
 
-  return { eventos, loading, addEvento, refresh };
+  return { timeline, eventos: timeline, loading, add, addEvento: add, refresh };
 }
 
+// ============================================================
+// useDocumentosObra
+// ============================================================
 export function useDocumentosObra(obraId: string) {
   const [documentos, setDocumentos] = useState<DocumentoObra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setDocumentos(documentosStorage.getAll().filter((d) => d.obraId === obraId));
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getDocumentosObra(obraId);
+      setDocumentos(data as unknown as DocumentoObra[]);
+    } catch (err) {
+      console.error("Erro ao carregar documentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [obraId]);
 
-  const refresh = useCallback(() => {
-    setDocumentos(documentosStorage.getAll().filter((d) => d.obraId === obraId));
-  }, [obraId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const addDocumento = useCallback((doc: Omit<DocumentoObra, "id" | "criadoEm">) => {
-    const newItem: DocumentoObra = { ...doc, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    documentosStorage.create(newItem);
-    refresh();
-  }, [obraId]);
+  const add = useCallback(async (doc: Omit<DocumentoObra, "id">) => {
+    await addDocumentoObra(doc);
+    await refresh();
+  }, [refresh]);
 
-  return { documentos, loading, addDocumento, refresh };
+  return { documentos, loading, add, addDocumento: add, refresh };
 }
 
+// ============================================================
+// useFotosObra
+// ============================================================
 export function useFotosObra(obraId: string) {
   const [fotos, setFotos] = useState<FotoObra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setFotos(fotosStorage.getAll().filter((f) => f.obraId === obraId));
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getFotosObra(obraId);
+      setFotos(data as unknown as FotoObra[]);
+    } catch (err) {
+      console.error("Erro ao carregar fotos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [obraId]);
 
-  const refresh = useCallback(() => {
-    setFotos(fotosStorage.getAll().filter((f) => f.obraId === obraId));
-  }, [obraId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const addFoto = useCallback((foto: Omit<FotoObra, "id" | "criadoEm">) => {
-    const newItem: FotoObra = { ...foto, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    fotosStorage.create(newItem);
-    refresh();
-  }, [obraId]);
+  const add = useCallback(async (foto: Omit<FotoObra, "id">) => {
+    await addFotoObra(foto);
+    await refresh();
+  }, [refresh]);
 
-  return { fotos, loading, addFoto, refresh };
+  return { fotos, loading, add, addFoto: add, refresh };
 }
 
+// ============================================================
+// useEventosCalendario
+// ============================================================
 export function useEventosCalendario() {
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setEventos(eventosStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getEventosCalendario();
+      setEventos(data as unknown as EventoCalendario[]);
+    } catch (err) {
+      console.error("Erro ao carregar eventos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { eventos, loading };
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { eventos, loading, refresh };
 }
 
+// ============================================================
+// useVeiculos
+// ============================================================
 export function useVeiculos() {
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setVeiculos(veiculosStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getVeiculos();
+      setVeiculos(data as unknown as Veiculo[]);
+    } catch (err) {
+      console.error("Erro ao carregar veiculos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setVeiculos(veiculosStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createVeiculo = useCallback((veiculo: Omit<Veiculo, "id" | "criadoEm">) => {
-    const newItem: Veiculo = { ...veiculo, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    veiculosStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (veiculo: Omit<Veiculo, "id">) => {
+    const created = await createVeiculo(veiculo);
+    await refresh();
+    return created as unknown as Veiculo;
   }, [refresh]);
 
-  const updateVeiculo = useCallback((id: string, updates: Partial<Veiculo>) => {
-    veiculosStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<Veiculo>) => {
+    const updated = await updateVeiculo(id, updates);
+    await refresh();
+    return updated as unknown as Veiculo;
   }, [refresh]);
 
-  const deleteVeiculo = useCallback((id: string) => {
-    veiculosStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteVeiculo(id);
+    await refresh();
   }, [refresh]);
 
-  return { veiculos, loading, createVeiculo, updateVeiculo, deleteVeiculo, refresh };
+  return { veiculos, loading, create, update, delete: remove, createVeiculo: create, updateVeiculo: update, deleteVeiculo: remove, refresh };
 }
 
+// ============================================================
+// useManutencoesVeiculo
+// ============================================================
 export function useManutencoesVeiculo(veiculoId?: string) {
   const [manutencoes, setManutencoes] = useState<ManutencaoVeiculo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = manutencoesVeiculoStorage.getAll();
-    setManutencoes(veiculoId ? all.filter((m) => m.veiculoId === veiculoId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getManutencoesVeiculo(veiculoId);
+      setManutencoes(data as unknown as ManutencaoVeiculo[]);
+    } catch (err) {
+      console.error("Erro ao carregar manutencoes:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [veiculoId]);
 
-  const refresh = useCallback(() => {
-    const all = manutencoesVeiculoStorage.getAll();
-    setManutencoes(veiculoId ? all.filter((m) => m.veiculoId === veiculoId) : all);
-  }, [veiculoId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createManutencao = useCallback((manutencao: Omit<ManutencaoVeiculo, "id" | "criadoEm">) => {
-    const newItem: ManutencaoVeiculo = { ...manutencao, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    manutencoesVeiculoStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (manutencao: Omit<ManutencaoVeiculo, "id">) => {
+    const created = await createManutencaoVeiculo(manutencao);
+    await refresh();
+    return created as unknown as ManutencaoVeiculo;
   }, [refresh]);
 
-  return { manutencoes, loading, createManutencao, refresh };
+  return { manutencoes, loading, create, createManutencao: create, refresh };
 }
 
+// ============================================================
+// useAbastecimentosVeiculo
+// ============================================================
 export function useAbastecimentosVeiculo(veiculoId?: string) {
   const [abastecimentos, setAbastecimentos] = useState<AbastecimentoVeiculo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = abastecimentosVeiculoStorage.getAll();
-    setAbastecimentos(veiculoId ? all.filter((a) => a.veiculoId === veiculoId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAbastecimentosVeiculo(veiculoId);
+      setAbastecimentos(data as unknown as AbastecimentoVeiculo[]);
+    } catch (err) {
+      console.error("Erro ao carregar abastecimentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [veiculoId]);
 
-  const refresh = useCallback(() => {
-    const all = abastecimentosVeiculoStorage.getAll();
-    setAbastecimentos(veiculoId ? all.filter((a) => a.veiculoId === veiculoId) : all);
-  }, [veiculoId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createAbastecimento = useCallback((abastecimento: Omit<AbastecimentoVeiculo, "id" | "criadoEm">) => {
-    const newItem: AbastecimentoVeiculo = { ...abastecimento, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    abastecimentosVeiculoStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (abastecimento: Omit<AbastecimentoVeiculo, "id">) => {
+    const created = await createAbastecimentoVeiculo(abastecimento);
+    await refresh();
+    return created as unknown as AbastecimentoVeiculo;
   }, [refresh]);
 
-  return { abastecimentos, loading, createAbastecimento, refresh };
+  return { abastecimentos, loading, create, createAbastecimento: create, refresh };
 }
 
+// ============================================================
+// useDocumentosVeiculo
+// ============================================================
 export function useDocumentosVeiculo(veiculoId?: string) {
   const [documentos, setDocumentos] = useState<DocumentoVeiculo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = documentosVeiculoStorage.getAll();
-    setDocumentos(veiculoId ? all.filter((d) => d.veiculoId === veiculoId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getDocumentosVeiculo(veiculoId);
+      setDocumentos(data as unknown as DocumentoVeiculo[]);
+    } catch (err) {
+      console.error("Erro ao carregar documentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [veiculoId]);
 
-  const refresh = useCallback(() => {
-    const all = documentosVeiculoStorage.getAll();
-    setDocumentos(veiculoId ? all.filter((d) => d.veiculoId === veiculoId) : all);
-  }, [veiculoId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createDocumento = useCallback((doc: Omit<DocumentoVeiculo, "id" | "criadoEm">) => {
-    const newItem: DocumentoVeiculo = { ...doc, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    documentosVeiculoStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (doc: Omit<DocumentoVeiculo, "id">) => {
+    const created = await createDocumentoVeiculo(doc);
+    await refresh();
+    return created as unknown as DocumentoVeiculo;
   }, [refresh]);
 
-  return { documentos, loading, createDocumento, refresh };
+  return { documentos, loading, create, createDocumento: create, refresh };
 }
 
+// ============================================================
+// useClientes
+// ============================================================
 export function useClientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setClientes(clientesStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getClientesService();
+      setClientes(data as unknown as Cliente[]);
+    } catch (err) {
+      console.error("Erro ao carregar clientes:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setClientes(clientesStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createCliente = useCallback((cliente: Omit<Cliente, "id" | "criadoEm">) => {
-    const newItem: Cliente = { ...cliente, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    clientesStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (cliente: Omit<Cliente, "id">) => {
+    const created = await createClienteService(cliente);
+    await refresh();
+    return created as unknown as Cliente;
   }, [refresh]);
 
-  const updateCliente = useCallback((id: string, updates: Partial<Cliente>) => {
-    clientesStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<Cliente>) => {
+    const updated = await updateClienteService(id, updates);
+    await refresh();
+    return updated as unknown as Cliente;
   }, [refresh]);
 
-  const deleteCliente = useCallback((id: string) => {
-    clientesStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteClienteService(id);
+    await refresh();
   }, [refresh]);
 
-  return { clientes, loading, createCliente, updateCliente, deleteCliente, refresh };
+  return { clientes, loading, create, update, delete: remove, createCliente: create, updateCliente: update, deleteCliente: remove, refresh };
 }
 
+// ============================================================
+// useDocumentosCliente
+// ============================================================
 export function useDocumentosCliente(clienteId?: string) {
   const [documentos, setDocumentos] = useState<DocumentoCliente[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const all = documentosClienteStorage.getAll();
-    setDocumentos(clienteId ? all.filter((d) => d.clienteId === clienteId) : all);
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getDocumentosCliente(clienteId);
+      setDocumentos(data as unknown as DocumentoCliente[]);
+    } catch (err) {
+      console.error("Erro ao carregar documentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [clienteId]);
 
-  const refresh = useCallback(() => {
-    const all = documentosClienteStorage.getAll();
-    setDocumentos(clienteId ? all.filter((d) => d.clienteId === clienteId) : all);
-  }, [clienteId]);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createDocumento = useCallback((doc: Omit<DocumentoCliente, "id" | "criadoEm">) => {
-    const newItem: DocumentoCliente = { ...doc, id: generateId(), criadoEm: new Date().toISOString().split("T")[0] };
-    documentosClienteStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (doc: Omit<DocumentoCliente, "id">) => {
+    const created = await createDocumentoCliente(doc);
+    await refresh();
+    return created as unknown as DocumentoCliente;
   }, [refresh]);
 
-  return { documentos, loading, createDocumento, refresh };
+  return { documentos, loading, create, createDocumento: create, refresh };
 }
 
+// ============================================================
+// useOrcamentos
+// ============================================================
 export function useOrcamentos() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setOrcamentos(orcamentosStorage.getAll());
-    setLoading(false);
+  const refresh = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getOrcamentosService();
+      setOrcamentos(data as unknown as Orcamento[]);
+    } catch (err) {
+      console.error("Erro ao carregar orcamentos:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const refresh = useCallback(() => {
-    setOrcamentos(orcamentosStorage.getAll());
-  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
 
-  const createOrcamento = useCallback((orcamento: Omit<Orcamento, "id" | "criadoEm"> & { id?: string }) => {
-    const newItem: Orcamento = {
-      ...orcamento,
-      id: orcamento.id || generateId(),
-      criadoEm: new Date().toISOString().split("T")[0],
-    } as Orcamento;
-    orcamentosStorage.create(newItem);
-    refresh();
-    return newItem;
+  const create = useCallback(async (orcamento: Omit<Orcamento, "id"> & { id?: string }) => {
+    const created = await createOrcamentoService(orcamento);
+    await refresh();
+    return created as unknown as Orcamento;
   }, [refresh]);
 
-  const updateOrcamento = useCallback((id: string, updates: Partial<Orcamento>) => {
-    orcamentosStorage.update(id, updates);
-    refresh();
+  const update = useCallback(async (id: string, updates: Partial<Orcamento>) => {
+    const updated = await updateOrcamentoService(id, updates);
+    await refresh();
+    return updated as unknown as Orcamento;
   }, [refresh]);
 
-  const deleteOrcamento = useCallback((id: string) => {
-    orcamentosStorage.delete(id);
-    refresh();
+  const remove = useCallback(async (id: string) => {
+    await deleteOrcamentoService(id);
+    await refresh();
   }, [refresh]);
 
-  return { orcamentos, loading, createOrcamento, updateOrcamento, deleteOrcamento, refresh };
+  return { orcamentos, loading, create, update, delete: remove, createOrcamento: create, updateOrcamento: update, deleteOrcamento: remove, refresh };
 }
+
+
+
+
+
