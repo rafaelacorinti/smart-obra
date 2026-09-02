@@ -16,12 +16,19 @@ export async function GET(
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("user_companies")
-      .select("*")
+      .select("*, user_profiles!user_companies_user_id_fkey(name, email)")
       .eq("company_id", params.id)
       .order("created_at", { ascending: false });
     if (error) throw error;
 
-    return NextResponse.json(data);
+    const result = (data || []).map((d: any) => ({
+      ...d,
+      user_name: d.user_profiles?.name || null,
+      user_email: d.user_profiles?.email || null,
+      user_profiles: undefined,
+    }));
+
+    return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -40,11 +47,50 @@ export async function POST(
     const body = await req.json();
     const supabase = createAdminClient();
 
+    let userId = body.userId;
+
+    if (body.email && !userId) {
+      const { data: userProfile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("email", body.email)
+        .single();
+
+      if (profileError || !userProfile) {
+        return NextResponse.json(
+          { error: "Usuario nao encontrado com este email" },
+          { status: 404 }
+        );
+      }
+      userId = userProfile.id;
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Informe o email ou ID do usuario" },
+        { status: 400 }
+      );
+    }
+
+    const { data: existing } = await supabase
+      .from("user_companies")
+      .select("id")
+      .eq("company_id", params.id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "Este usuario ja e membro desta empresa" },
+        { status: 409 }
+      );
+    }
+
     const { data, error } = await supabase
       .from("user_companies")
       .insert({
         company_id: params.id,
-        user_id: body.userId,
+        user_id: userId,
         role: body.role || "member",
       })
       .select()
