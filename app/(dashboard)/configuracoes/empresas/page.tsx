@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,6 +117,7 @@ export default function EmpresasPage() {
   const [showCompanyDialog, setShowCompanyDialog] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [companyForm, setCompanyForm] = useState({ name: "", slug: "", status: "active", plan: "free" });
+  const [companyError, setCompanyError] = useState("");
 
   // Members
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -167,20 +168,31 @@ export default function EmpresasPage() {
   const loadMembers = useCallback(async (companyId: string) => {
     try {
       setLoadingMembers(true);
+      setMembers([]);
       const res = await fetch(`/api/admin/companies/${companyId}/users`);
-      if (!res.ok) throw new Error("Erro ao carregar membros");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error("[loadMembers] Erro:", res.status, errData);
+        throw new Error(errData.error || "Erro ao carregar membros");
+      }
       const data = await res.json();
+      console.log("[loadMembers] Dados recebidos:", data);
+      if (!Array.isArray(data)) {
+        console.error("[loadMembers] Resposta inesperada (nao e array):", data);
+        setMembers([]);
+        return;
+      }
       setMembers(data.map((d: any) => ({
         id: d.id,
         companyId: d.company_id,
         userId: d.user_id,
-        userName: d.user_name || null,
-        userEmail: d.user_email || null,
+        userName: d.user_name || d.name || null,
+        userEmail: d.user_email || d.email || null,
         role: d.role || "member",
         createdAt: d.created_at,
       })));
     } catch (err) {
-      console.error(err);
+      console.error("[loadMembers] Erro:", err);
     } finally {
       setLoadingMembers(false);
     }
@@ -189,6 +201,7 @@ export default function EmpresasPage() {
   const handleSaveCompany = async () => {
     try {
       setSaving(true);
+      setCompanyError("");
       const method = editingCompany ? "PUT" : "POST";
       const body = editingCompany
         ? { id: editingCompany.id, ...companyForm }
@@ -199,13 +212,24 @@ export default function EmpresasPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Erro ao salvar empresa");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const msg = errData.error || "Erro ao salvar empresa";
+        if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("slug") || msg.includes("already exists") || msg.includes("duplicar") || res.status === 409) {
+          setCompanyError("Ja existe uma empresa com este slug. Escolha um slug diferente.");
+        } else {
+          setCompanyError(msg);
+        }
+        return;
+      }
       setShowCompanyDialog(false);
       setEditingCompany(null);
       setCompanyForm({ name: "", slug: "", status: "active", plan: "free" });
+      setCompanyError("");
       await loadCompanies();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setCompanyError(err.message || "Erro inesperado ao salvar empresa");
     } finally {
       setSaving(false);
     }
@@ -335,6 +359,7 @@ export default function EmpresasPage() {
         <Button onClick={() => {
           setEditingCompany(null);
           setCompanyForm({ name: "", slug: "", status: "active", plan: "free" });
+          setCompanyError("");
           setShowCompanyDialog(true);
         }}>
           <Plus className="h-4 w-4 mr-2" />
@@ -410,6 +435,7 @@ export default function EmpresasPage() {
                             status: company.status,
                             plan: company.plan,
                           });
+                          setCompanyError("");
                           setShowCompanyDialog(true);
                         }}
                       >
@@ -526,7 +552,14 @@ export default function EmpresasPage() {
       </div>
 
       {/* Company Dialog */}
-      <Dialog open={showCompanyDialog} onOpenChange={setShowCompanyDialog}>
+      <Dialog open={showCompanyDialog} onOpenChange={(open) => {
+        setShowCompanyDialog(open);
+        if (!open) {
+          setEditingCompany(null);
+          setCompanyForm({ name: "", slug: "", status: "active", plan: "free" });
+          setCompanyError("");
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -578,6 +611,12 @@ export default function EmpresasPage() {
               </Select>
             </div>
           </div>
+          {companyError && (
+            <div className="flex items-center gap-2 p-3 rounded-md bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-800">
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <p className="text-sm text-red-700 dark:text-red-400">{companyError}</p>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCompanyDialog(false)}>
               Cancelar

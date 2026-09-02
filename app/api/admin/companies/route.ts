@@ -33,6 +33,19 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const supabase = createAdminClient();
 
+    // Verificar se slug ja existe
+    const { data: existing } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("slug", body.slug)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json(
+        { error: "Ja existe uma empresa com este slug" },
+        { status: 409 }
+      );
+    }
+
     const { data, error } = await supabase
       .from("companies")
       .insert({

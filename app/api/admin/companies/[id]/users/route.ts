@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -13,13 +13,21 @@ export async function GET(
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 
+    const companyId = params.id;
+    console.log("[GET /companies/id/users] companyId:", companyId);
+
     const supabase = createAdminClient();
     const { data: members, error: membersError } = await supabase
       .from("user_companies")
       .select("*")
-      .eq("company_id", params.id)
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
-    if (membersError) throw membersError;
+    if (membersError) {
+      console.error("[GET /companies/id/users] membersError:", membersError);
+      throw membersError;
+    }
+
+    console.log("[GET /companies/id/users] members encontrados:", members?.length || 0);
 
     if (!members || members.length === 0) {
       return NextResponse.json([]);
