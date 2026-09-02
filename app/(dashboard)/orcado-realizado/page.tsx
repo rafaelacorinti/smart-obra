@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useObras } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
 import { syncAll } from "@/lib/sync-modules";
+import { useCompany } from "@/contexts/company-context";
 import { ModuleGuard } from "@/components/module-guard";
 import { createClient } from "@/lib/supabase/client";
 
@@ -36,6 +37,7 @@ function getStatus(planejado: number, realizado: number): { label: string; color
 
 export default function OrcadoRealizadoPage() {
   const { obras, loading: loadingObras } = useObras();
+  const { companyId } = useCompany();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedObra, setSelectedObra] = useState<string>("");
@@ -47,11 +49,12 @@ export default function OrcadoRealizadoPage() {
     if (!selectedObraId) return;
     try {
       setLoading(true);
-      await syncAll();
+      await syncAll(companyId);
       const supabase = createClient();
       const { data } = await supabase
         .from("orcado_realizado")
         .select("*")
+        .eq("company_id", companyId)
         .eq("obra_id", selectedObraId);
 
       setDados((data || []).map((d: any) => ({

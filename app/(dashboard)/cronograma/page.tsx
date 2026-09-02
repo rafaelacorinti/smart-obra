@@ -5,6 +5,7 @@ import { Calendar, Edit2, AlertTriangle, CheckCircle2, TrendingUp } from "lucide
 import { PageHeader } from "@/components/ui/page-header";
 import { useObras } from "@/hooks/use-storage-data";
 import { createClient } from "@/lib/supabase/client";
+import { useCompany } from "@/contexts/company-context";
 import {
   LineChart,
   Line,
@@ -168,6 +169,7 @@ function GanttChart({ etapas, obraInicio }: { etapas: EtapaCronograma[]; obraIni
 
 export default function CronogramaPage() {
   const { obras, loading: obrasLoading } = useObras();
+  const { companyId } = useCompany();
   const [selectedObraId, setSelectedObraId] = useState<string>("");
   const [etapas, setEtapas] = useState<EtapaCronograma[]>([]);
   const [activeTab, setActiveTab] = useState<"fisico-financeiro" | "gantt">("fisico-financeiro");
@@ -185,6 +187,7 @@ export default function CronogramaPage() {
       .from("cronograma_etapas")
       .select("*")
       .eq("obra_id", selectedObraId)
+      .eq("company_id", companyId)
       .order("ordem", { ascending: true })
       .then(({ data }: any) => {
         if (!data) return;
@@ -262,7 +265,8 @@ export default function CronogramaPage() {
         valor_realizado: editingEtapa.valorRealizado,
         status: newStatus,
       } as any)
-      .eq("id", editingEtapa.id);
+      .eq("id", editingEtapa.id)
+      .eq("company_id", companyId);
 
     setEtapas((prev) =>
       prev

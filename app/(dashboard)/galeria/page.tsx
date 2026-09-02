@@ -15,6 +15,7 @@ import { ModuleGuard } from "@/components/module-guard";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useCompany } from "@/contexts/company-context";
 
 interface FotoGaleria {
   id: string;
@@ -30,6 +31,7 @@ const ETAPAS = ["Fundacao","Estrutura","Alvenaria","Cobertura","Instalacoes Elet
 
 export default function GaleriaPage() {
   const { obras } = useObras();
+  const { companyId } = useCompany();
   const [fotos, setFotos] = useState<FotoGaleria[]>([]);
   const [obraSelecionada, setObraSelecionada] = useState<string>("todas");
   const [filtroMes, setFiltroMes] = useState<string>("todos");
@@ -52,6 +54,7 @@ export default function GaleriaPage() {
     const { data, error } = await supabase
       .from("fotos_obra")
       .select("*")
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -105,6 +108,7 @@ export default function GaleriaPage() {
       descricao: uploadDescricao,
       data: uploadData,
       etapa: uploadEtapa,
+      company_id: companyId,
     }));
 
     const { error } = await supabase.from("fotos_obra").insert(rows as any);
@@ -131,7 +135,7 @@ export default function GaleriaPage() {
 
   const deleteFoto = async (id: string) => {
     const supabase = createClient();
-    const { error } = await supabase.from("fotos_obra").delete().eq("id", id);
+    const { error } = await supabase.from("fotos_obra").delete().eq("id", id).eq("company_id", companyId);
 
     if (error) {
       console.error("Erro ao deletar foto:", error);

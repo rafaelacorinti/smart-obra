@@ -1,4 +1,4 @@
-import { DefaultSession } from "next-auth";
+﻿import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
@@ -8,6 +8,10 @@ declare module "next-auth" {
       companyId: string;
       companyName: string;
       allowedModules?: string[];
+      companyRole?: string;
+      companySlug?: string;
+      isPlatformAdmin?: boolean;
+      companies?: any[];
     } & DefaultSession["user"];
   }
 }
@@ -19,5 +23,9 @@ declare module "next-auth/jwt" {
     companyId: string;
     companyName: string;
     allowedModules?: string[];
+    companyRole?: string;
+    companySlug?: string;
+    isPlatformAdmin?: boolean;
+    companies?: any[];
   }
 }

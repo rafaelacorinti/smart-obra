@@ -3,12 +3,14 @@
 export async function uploadFile(
   bucket: string,
   path: string,
-  file: File
+  file: File,
+  companyId?: string
 ): Promise<string> {
   const supabase = createClient();
+  const fullPath = companyId ? `tenants/${companyId}/${path}` : path;
   const { data, error } = await supabase.storage
     .from(bucket)
-    .upload(path, file, { upsert: true });
+    .upload(fullPath, file, { upsert: true });
   if (error) throw error;
   return data.path;
 }

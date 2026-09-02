@@ -1,33 +1,36 @@
 ﻿import { createClient } from "@/lib/supabase/client";
 import { toCamelCase, toSnakeCase } from "@/lib/supabase/utils";
 
-export async function getObras() {
+export async function getObras(companyId: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("obras")
     .select("*")
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data || []).map((d: any) => toCamelCase(d));
 }
 
-export async function getObraById(id: string) {
+export async function getObraById(companyId: string, id: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("obras")
     .select("*")
+    .eq("company_id", companyId)
     .eq("id", id)
     .single();
   if (error) throw error;
   return toCamelCase(data as any);
 }
 
-export async function createObra(obra: any) {
+export async function createObra(companyId: string, obra: any) {
   const supabase = createClient();
   const dbData = toSnakeCase(obra);
   delete dbData.id;
   delete dbData.created_at;
   delete dbData.criado_em;
+  dbData.company_id = companyId;
   const { data, error } = await supabase
     .from("obras")
     .insert(dbData)
@@ -37,11 +40,12 @@ export async function createObra(obra: any) {
   return toCamelCase(data as any);
 }
 
-export async function updateObra(id: string, updates: any) {
+export async function updateObra(companyId: string, id: string, updates: any) {
   const supabase = createClient();
   const dbData = toSnakeCase(updates);
   delete dbData.id;
   delete dbData.created_at;
+  delete dbData.company_id;
   const { data, error } = await supabase
     .from("obras")
     .update(dbData)
@@ -52,16 +56,14 @@ export async function updateObra(id: string, updates: any) {
   return toCamelCase(data as any);
 }
 
-export async function deleteObra(id: string) {
+export async function deleteObra(companyId: string, id: string) {
   const supabase = createClient();
   const { error } = await supabase.from("obras").delete().eq("id", id);
   if (error) throw error;
 }
 
-export async function deleteObraCascade(id: string) {
+export async function deleteObraCascade(companyId: string, id: string) {
   const supabase = createClient();
-  // Child tables with ON DELETE CASCADE will auto-delete
-  // But some have ON DELETE SET NULL, so we explicitly clean up
   const cascadeTables = [
     "colaboradores_obra", "materiais_obra", "diario_obra",
     "timeline_obra", "documentos_obra", "fotos_obra"
@@ -69,8 +71,6 @@ export async function deleteObraCascade(id: string) {
   for (const table of cascadeTables) {
     await supabase.from(table).delete().eq("obra_id", id);
   }
-  // lancamentos, ordens_servico, movimentacoes_estoque have SET NULL
-  // orcamentos has CASCADE
   const { error } = await supabase.from("obras").delete().eq("id", id);
   if (error) throw error;
 }

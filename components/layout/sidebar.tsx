@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useEffect, useState } from "react";
+import { CompanySwitcher } from "@/components/company-switcher";
+import { useCompany } from "@/contexts/company-context";
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -54,6 +56,7 @@ const menuItems = [
 
 const adminItems = [
   { href: "/configuracoes", label: "Configuracoes", icon: Settings },
+  { icon: Building2, label: "Empresas", href: "/configuracoes/empresas", adminOnly: true },
 ];
 
 function usePendingRequestsCount() {
@@ -90,6 +93,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { isOpen, isMobileOpen, toggle, closeMobile, setOpen } = useSidebarStore();
   const { user } = useCurrentUser();
+  const { isPlatformAdmin } = useCompany();
   const pendingCount = usePendingRequestsCount();
 
   useEffect(() => {
@@ -107,7 +111,8 @@ export function Sidebar() {
     return () => window.removeEventListener("resize", handleResize);
   }, [setOpen]);
 
-  const allItems = user?.role === "ADMIN" ? [...menuItems, ...adminItems] : menuItems;
+  const allItems = (user?.role === "ADMIN" ? [...menuItems, ...adminItems] : menuItems)
+    .filter(item => !("adminOnly" in item) || !item.adminOnly || isPlatformAdmin);
 
   const sidebarContent = (
     <>
@@ -125,6 +130,11 @@ export function Sidebar() {
         >
           <X className="h-5 w-5" />
         </button>
+      </div>
+
+      {/* Company Switcher */}
+      <div className={cn("px-3 py-2 border-b border-white/10", !isOpen && "px-1")}>
+        {isOpen ? <CompanySwitcher /> : null}
       </div>
 
       <nav className="mt-4 flex-1 space-y-1 px-2 overflow-y-auto">

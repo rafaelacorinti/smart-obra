@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useObras } from "@/hooks/use-storage-data";
 import { formatCurrency } from "@/lib/utils";
 import { syncAll } from "@/lib/sync-modules";
+import { useCompany } from "@/contexts/company-context";
 import { ModuleGuard } from "@/components/module-guard";
 import { createClient } from "@/lib/supabase/client";
 
@@ -74,6 +75,7 @@ function CustomTreemapContent({ x = 0, y = 0, width = 0, height = 0, name = "", 
 
 export default function CentroCustosPage() {
   const { obras, loading: loadingObras } = useObras();
+  const { companyId } = useCompany();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedObra, setSelectedObra] = useState<string>("all");
@@ -87,16 +89,18 @@ export default function CentroCustosPage() {
     if (!selectedObraId) return;
     try {
       setLoading(true);
-      await syncAll();
+      await syncAll(companyId);
       const supabase = createClient();
       const { data: centrosData } = await supabase
         .from("centro_custos")
         .select("*")
+        .eq("company_id", companyId)
         .eq("obra_id", selectedObraId);
 
       const { data: despesasData } = await supabase
         .from("lancamentos")
         .select("*")
+        .eq("company_id", companyId)
         .eq("obra_id", selectedObraId)
         .eq("tipo", "DESPESA")
         .eq("status", "PAGO");

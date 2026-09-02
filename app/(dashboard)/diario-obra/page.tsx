@@ -7,6 +7,7 @@ import { useObras } from "@/hooks/use-storage-data";
 import { createClient } from "@/lib/supabase/client";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ModuleGuard } from "@/components/module-guard";
+import { useCompany } from "@/contexts/company-context";
 
 interface RegistroDiario {
   id: string;
@@ -44,6 +45,7 @@ function getClimaLabel(clima: string) {
 
 export default function DiarioObraPage() {
   const { obras, loading: obrasLoading } = useObras();
+  const { companyId } = useCompany();
   const [selectedObraId, setSelectedObraId] = useState<string>("");
   const [registros, setRegistros] = useState<RegistroDiario[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -79,6 +81,7 @@ export default function DiarioObraPage() {
       .from("diario_obra")
       .select("*")
       .eq("obra_id", obraId)
+      .eq("company_id", companyId)
       .order("data", { ascending: false });
 
     if (error) {
@@ -155,6 +158,7 @@ export default function DiarioObraPage() {
       ocorrencias: formData.ocorrencias,
       fotos: formData.fotos,
       videos: formData.videos,
+      company_id: companyId,
     } as any);
 
     if (error) {

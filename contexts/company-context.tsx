@@ -73,10 +73,22 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const defaultCompanyContext: CompanyContextType = {
+  companyId: "",
+  companyName: "",
+  companySlug: "",
+  companyRole: "member",
+  isPlatformAdmin: false,
+  companies: [],
+  hasMultipleCompanies: false,
+  switchCompany: async () => {},
+  isSwitching: false,
+  canEdit: false,
+  canManageUsers: false,
+  canDeleteCompany: false,
+};
+
 export function useCompany() {
   const context = useContext(CompanyContext);
-  if (!context) {
-    throw new Error("useCompany must be used within a CompanyProvider");
-  }
-  return context;
+  return context ?? defaultCompanyContext;
 }

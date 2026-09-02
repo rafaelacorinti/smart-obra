@@ -1,9 +1,9 @@
 ﻿import { createClient } from "@/lib/supabase/client";
 import { toCamelCase, toSnakeCase } from "@/lib/supabase/utils";
 
-export async function getLancamentos(obraId?: string) {
+export async function getLancamentos(companyId: string, obraId?: string) {
   const supabase = createClient();
-  let query = supabase.from("lancamentos").select("*").order("data", { ascending: false });
+  let query = supabase.from("lancamentos").select("*").eq("company_id", companyId).order("data", { ascending: false });
   if (obraId) {
     query = query.eq("obra_id", obraId);
   }
@@ -12,12 +12,13 @@ export async function getLancamentos(obraId?: string) {
   return (data || []).map((d: any) => toCamelCase(d));
 }
 
-export async function createLancamento(lancamento: any) {
+export async function createLancamento(companyId: string, lancamento: any) {
   const supabase = createClient();
   const dbData = toSnakeCase(lancamento);
   delete dbData.id;
   delete dbData.created_at;
   delete dbData.criado_em;
+  dbData.company_id = companyId;
   const { data, error } = await supabase
     .from("lancamentos")
     .insert(dbData)
@@ -27,11 +28,12 @@ export async function createLancamento(lancamento: any) {
   return toCamelCase(data as any);
 }
 
-export async function updateLancamento(id: string, updates: any) {
+export async function updateLancamento(companyId: string, id: string, updates: any) {
   const supabase = createClient();
   const dbData = toSnakeCase(updates);
   delete dbData.id;
   delete dbData.created_at;
+  delete dbData.company_id;
   const { data, error } = await supabase
     .from("lancamentos")
     .update(dbData)
@@ -42,7 +44,7 @@ export async function updateLancamento(id: string, updates: any) {
   return toCamelCase(data as any);
 }
 
-export async function deleteLancamento(id: string) {
+export async function deleteLancamento(companyId: string, id: string) {
   const supabase = createClient();
   const { error } = await supabase.from("lancamentos").delete().eq("id", id);
   if (error) throw error;

@@ -1,23 +1,25 @@
 ﻿import { createClient } from "@/lib/supabase/client";
 import { toCamelCase, toSnakeCase } from "@/lib/supabase/utils";
 
-export async function getDocumentosVeiculo(veiculoId?: string) {
+export async function getDocumentosVeiculo(companyId: string, veiculoId?: string) {
   const supabase = createClient();
   let query = supabase
     .from("documentos_veiculo")
-    .select("*");
+    .select("*")
+    .eq("company_id", companyId);
   if (veiculoId) query = query.eq("veiculo_id", veiculoId);
   const { data, error } = await query;
   if (error) throw error;
   return (data || []).map((d: any) => toCamelCase(d));
 }
 
-export async function createDocumentoVeiculo(doc: any) {
+export async function createDocumentoVeiculo(companyId: string, doc: any) {
   const supabase = createClient();
   const dbData = toSnakeCase(doc);
   delete dbData.id;
   delete dbData.created_at;
   delete dbData.criado_em;
+  dbData.company_id = companyId;
   const { data, error } = await supabase
     .from("documentos_veiculo")
     .insert(dbData)

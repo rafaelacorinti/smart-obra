@@ -1,7 +1,5 @@
 ﻿import { createClient } from "@/lib/supabase/client";
 
-// ---- Types ----
-
 interface ComposicaoDetalhe {
   tipo: "material" | "maoDeObra" | "equipamento";
   descricao: string;
@@ -59,6 +57,7 @@ interface CentroCustoItem {
   centro: string;
   orcado: number;
   realizado: number;
+  company_id?: string;
 }
 
 interface OrcadoRealizadoItem {
@@ -66,9 +65,8 @@ interface OrcadoRealizadoItem {
   categoria: string;
   planejado: number;
   realizado: number;
+  company_id?: string;
 }
-
-// ---- Category mappings ----
 
 const FINANCEIRO_TO_ORCADO_REALIZADO: Record<string, string> = {
   "Material": "Materiais",
@@ -106,8 +104,6 @@ const CATEGORIAS_ORCADO_REALIZADO = [
   "Materiais", "Mao de Obra", "Equipamentos", "Terceiros", "Administracao", "Outros",
 ];
 
-// ---- Helpers ----
-
 function computeOrcamentoCostBreakdown(orc: SyncOrcamento) {
   let custoMateriais = 0;
   let custoMaoDeObra = 0;
@@ -137,7 +133,8 @@ function computeOrcamentoCostBreakdown(orc: SyncOrcamento) {
 function computeCentroCustos(
   obraId: string,
   orcamentos: SyncOrcamento[],
-  lancamentos: SyncLancamento[]
+  lancamentos: SyncLancamento[],
+  companyId?: string
 ): CentroCustoItem[] {
   const obraOrcamentos = orcamentos.filter((o) => o.obra_id === obraId);
   const obraLancamentos = lancamentos.filter(
@@ -168,13 +165,15 @@ function computeCentroCustos(
     centro,
     orcado: Math.round((centroOrcado[centro] || 0) * 100) / 100,
     realizado: Math.round((centroRealizado[centro] || 0) * 100) / 100,
+    ...(companyId ? { company_id: companyId } : {}),
   }));
 }
 
 function computeOrcadoRealizado(
   obraId: string,
   orcamentos: SyncOrcamento[],
-  lancamentos: SyncLancamento[]
+  lancamentos: SyncLancamento[],
+  companyId?: string
 ): OrcadoRealizadoItem[] {
   const obraOrcamentos = orcamentos.filter((o) => o.obra_id === obraId);
   const obraLancamentos = lancamentos.filter(
@@ -210,30 +209,30 @@ function computeOrcadoRealizado(
     categoria: cat,
     planejado: Math.round((planejado[cat] || 0) * 100) / 100,
     realizado: Math.round((realizado[cat] || 0) * 100) / 100,
+    ...(companyId ? { company_id: companyId } : {}),
   }));
 }
 
-// ---- Public API ----
-
-export async function syncAllForObra(obraId: string): Promise<void> {
+export async function syncAllForObra(obraId: string, companyId?: string): Promise<void> {
   if (!obraId) return;
 
   const supabase = createClient();
 
-  // Fetch data from DB
-  const [orcRes, lancRes] = await Promise.all([
-    supabase.from("orcamentos").select("*").eq("obra_id", obraId),
-    supabase.from("lancamentos").select("*"),
-  ]);
+  let orcQuery = supabase.from("orcamentos").select("*").eq("obra_id", obraId);
+  let lancQuery = supabase.from("lancamentos").select("*");
+  if (companyId) {
+    orcQuery = orcQuery.eq("company_id", companyId);
+    lancQuery = lancQuery.eq("company_id", companyId);
+  }
+
+  const [orcRes, lancRes] = await Promise.all([orcQuery, lancQuery]);
 
   const orcamentos = (orcRes.data || []) as unknown as SyncOrcamento[];
   const lancamentos = (lancRes.data || []) as unknown as SyncLancamento[];
 
-  // Compute
-  const centros = computeCentroCustos(obraId, orcamentos, lancamentos);
-  const orcadoRealizado = computeOrcadoRealizado(obraId, orcamentos, lancamentos);
+  const centros = computeCentroCustos(obraId, orcamentos, lancamentos, companyId);
+  const orcadoRealizado = computeOrcadoRealizado(obraId, orcamentos, lancamentos, companyId);
 
-  // Delete existing for this obra, then insert new
   await supabase.from("centro_custos").delete().eq("obra_id", obraId);
   if (centros.length > 0) {
     await supabase.from("centro_custos").insert(centros);
@@ -245,24 +244,26 @@ export async function syncAllForObra(obraId: string): Promise<void> {
   }
 }
 
-export async function syncAll(): Promise<void> {
+export async function syncAll(companyId?: string): Promise<void> {
   const supabase = createClient();
 
-  // Get all obra IDs from multiple sources
-  const [obrasRes, orcRes, lancRes] = await Promise.all([
-    supabase.from("obras").select("id"),
-    supabase.from("orcamentos").select("obra_id"),
-    supabase.from("lancamentos").select("obra_id"),
-  ]);
+  let obrasQuery = supabase.from("obras").select("id");
+  let orcQuery = supabase.from("orcamentos").select("obra_id");
+  let lancQuery = supabase.from("lancamentos").select("obra_id");
+  if (companyId) {
+    obrasQuery = obrasQuery.eq("company_id", companyId);
+    orcQuery = orcQuery.eq("company_id", companyId);
+    lancQuery = lancQuery.eq("company_id", companyId);
+  }
+
+  const [obrasRes, orcRes, lancRes] = await Promise.all([obrasQuery, orcQuery, lancQuery]);
 
   const obraIds = new Set<string>();
   (obrasRes.data || []).forEach((o: any) => obraIds.add(o.id));
   (orcRes.data || []).forEach((o: any) => { if (o.obra_id) obraIds.add(o.obra_id); });
   (lancRes.data || []).forEach((l: any) => { if (l.obra_id) obraIds.add(l.obra_id); });
 
-  // Sync each obra
   for (const obraId of Array.from(obraIds)) {
-    await syncAllForObra(obraId);
+    await syncAllForObra(obraId, companyId);
   }
 }
-

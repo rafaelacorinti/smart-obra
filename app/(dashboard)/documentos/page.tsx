@@ -18,6 +18,7 @@ import {
 import { useObras } from "@/hooks/use-storage-data";
 import { createClient } from "@/lib/supabase/client";
 import { ModuleGuard } from "@/components/module-guard";
+import { useCompany } from "@/contexts/company-context";
 
 interface Documento {
   id: string;
@@ -72,6 +73,7 @@ function getFileIconSmall(tipo: string) {
 
 export default function DocumentosPage() {
   const supabase = createClient();
+  const { companyId } = useCompany();
   const { obras } = useObras();
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [showUpload, setShowUpload] = useState(false);
@@ -93,6 +95,7 @@ export default function DocumentosPage() {
       const { data, error } = await supabase
         .from("documentos_obra")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       if (error) { console.error(error); return; }
       setDocumentos(
@@ -159,6 +162,7 @@ export default function DocumentosPage() {
           descricao,
           obra_nome: obraSelecionada?.nome || "",
           data_upload: dataUpload,
+          company_id: companyId,
         } as any)
         .select()
         .single();
@@ -207,7 +211,8 @@ export default function DocumentosPage() {
     const { error } = await supabase
       .from("documentos_obra")
       .delete()
-      .eq("id", docId);
+      .eq("id", docId)
+      .eq("company_id", companyId);
     if (error) { console.error(error); return; }
     setDocumentos((prev) => prev.filter((d) => d.id !== docId));
   };

@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ModuleGuard } from "@/components/module-guard";
+import { useCompany } from "@/contexts/company-context";
 
 type CompraStatus = "SOLICITACAO" | "COTACAO" | "APROVACAO" | "PEDIDO" | "RECEBIMENTO" | "PAGAMENTO";
 
@@ -60,6 +61,7 @@ const STATUS_ORDER: CompraStatus[] = ["SOLICITACAO", "COTACAO", "APROVACAO", "PE
 
 export default function ComprasPage() {
   const supabase = createClient();
+  const { companyId } = useCompany();
   const { obras } = useObras();
   const { fornecedores } = useFornecedores();
   const [compras, setCompras] = useState<Compra[]>([]);
@@ -87,6 +89,7 @@ export default function ComprasPage() {
       const { data, error } = await supabase
         .from("compras")
         .select("*")
+        .eq("company_id", companyId)
         .order("created_at", { ascending: false });
       if (error) { console.error(error); return; }
       setCompras(
@@ -140,6 +143,7 @@ export default function ComprasPage() {
         cotacoes: [],
         data_solicitacao: new Date().toISOString().split("T")[0],
         observacoes: formObs,
+        company_id: companyId,
       } as any)
       .select()
       .single() as any;
@@ -188,7 +192,7 @@ export default function ComprasPage() {
     const { error } = await supabase
       .from("compras")
       .update({ status: nextStatus, [snakeDateKey]: dateValue } as any)
-      .eq("id", compraId);
+      .eq("id", compraId).eq("company_id", companyId);
 
     if (error) { console.error(error); return; }
 
@@ -215,7 +219,7 @@ export default function ComprasPage() {
     const { error } = await supabase
       .from("compras")
       .update({ cotacoes: novasCotacoes } as any)
-      .eq("id", compraId);
+      .eq("id", compraId).eq("company_id", companyId);
 
     if (error) { console.error(error); return; }
 

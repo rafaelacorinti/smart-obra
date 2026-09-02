@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import {
   Settings,
@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
 import { ALL_MODULES } from "@/lib/module-permissions";
 import { getSetting, setSetting } from "@/lib/supabase/services/app-settings";
+import { useCompany } from "@/contexts/company-context";
 import { createClient } from "@/lib/supabase/client";
 
 const defaultCategoriasFinanceiras = {
@@ -198,12 +199,13 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
 // ─── Tab: Empresa ─────────────────────────────────────────────────────────────
 
 function TabEmpresa() {
+  const { companyId } = useCompany();
   const [form, setForm] = useState<EmpresaData>(DEFAULT_EMPRESA);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const saved = await getSetting("smart-obra-empresa");
+        const saved = await getSetting(companyId, "smart-obra-empresa");
         if (saved) setForm(saved as EmpresaData);
       } catch {
         // keep defaults
@@ -219,7 +221,7 @@ function TabEmpresa() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await setSetting("smart-obra-empresa", form);
+      await setSetting(companyId, "smart-obra-empresa", form);
       showToast("Dados da empresa salvos com sucesso!");
     } catch {
       showToast("Erro ao salvar dados da empresa.", "error");
@@ -493,6 +495,7 @@ function TabUsuarios() {
 // ─── Tab: Categorias ──────────────────────────────────────────────────────────
 
 function TabCategorias() {
+  const { companyId } = useCompany();
   const [receitas, setReceitas] = useState<string[]>([]);
   const [despesas, setDespesas] = useState<string[]>([]);
   const [newReceita, setNewReceita] = useState("");
@@ -501,7 +504,7 @@ function TabCategorias() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const saved = await getSetting("smart-obra-categorias");
+        const saved = await getSetting(companyId, "smart-obra-categorias");
         if (saved) {
           setReceitas((saved as { receita: string[]; despesa: string[] }).receita);
           setDespesas((saved as { receita: string[]; despesa: string[] }).despesa);
@@ -519,7 +522,7 @@ function TabCategorias() {
 
   async function persist(r: string[], d: string[]) {
     try {
-      await setSetting("smart-obra-categorias", { receita: r, despesa: d });
+      await setSetting(companyId, "smart-obra-categorias", { receita: r, despesa: d });
       showToast("Categorias salvas!");
     } catch {
       showToast("Erro ao salvar categorias.", "error");
@@ -638,13 +641,14 @@ function TabCategorias() {
 // ─── Tab: Integracoes ─────────────────────────────────────────────────────────
 
 function TabIntegracoes() {
+  const { companyId } = useCompany();
   const [data, setData] = useState<IntegracoesData>(DEFAULT_INTEGRACOES);
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const saved = await getSetting("smart-obra-integracoes");
+        const saved = await getSetting(companyId, "smart-obra-integracoes");
         if (saved) setData(saved as IntegracoesData);
       } catch {
         // keep defaults
@@ -659,7 +663,7 @@ function TabIntegracoes() {
 
   async function handleSave() {
     try {
-      await setSetting("smart-obra-integracoes", data);
+      await setSetting(companyId, "smart-obra-integracoes", data);
       showToast("Configurações de integração salvas!");
     } catch {
       showToast("Erro ao salvar configurações de integração.", "error");
@@ -828,12 +832,13 @@ const BACKUP_TABLES = [
 ] as const;
 
 function TabBackup() {
+  const { companyId } = useCompany();
   const [ultimoBackup, setUltimoBackup] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const saved = await getSetting("smart-obra-ultimo-backup");
+        const saved = await getSetting(companyId, "smart-obra-ultimo-backup");
         if (saved) setUltimoBackup(saved as string);
       } catch {
         // no backup timestamp yet
@@ -849,7 +854,7 @@ function TabBackup() {
 
       await Promise.all(
         BACKUP_TABLES.map(async (table) => {
-          const { data } = await (supabase as any).from(table).select("*");
+          const { data } = await (supabase as any).from(table).select("*").eq("company_id", companyId);
           backup[table] = data ?? [];
         })
       );
@@ -857,7 +862,7 @@ function TabBackup() {
       const now = new Date().toISOString();
       backup["_meta"] = [{ exportedAt: now, version: "2.0" }] as unknown[];
 
-      await setSetting("smart-obra-ultimo-backup", now);
+      await setSetting(companyId, "smart-obra-ultimo-backup", now);
       setUltimoBackup(now);
 
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -891,7 +896,7 @@ function TabBackup() {
           if (!error) count += rows.length;
         }
 
-        const newTs = await getSetting("smart-obra-ultimo-backup");
+        const newTs = await getSetting(companyId, "smart-obra-ultimo-backup");
         if (newTs) setUltimoBackup(newTs as string);
         showToast(`${count} registros restaurados com sucesso!`);
       } catch {
@@ -987,6 +992,7 @@ function TabBackup() {
 // ─── Tab: Aparencia ───────────────────────────────────────────────────────────
 
 function TabAparencia() {
+  const { companyId } = useCompany();
   const { theme, setTheme } = useTheme();
   const [accentColor, setAccentColor] = useState("blue");
   const [mounted, setMounted] = useState(false);
@@ -995,7 +1001,7 @@ function TabAparencia() {
     setMounted(true);
     async function loadSettings() {
       try {
-        const saved = await getSetting("smart-obra-accent-color");
+        const saved = await getSetting(companyId, "smart-obra-accent-color");
         if (saved) setAccentColor(saved as string);
       } catch {
         // keep default
@@ -1007,7 +1013,7 @@ function TabAparencia() {
   async function handleAccent(value: string) {
     setAccentColor(value);
     try {
-      await setSetting("smart-obra-accent-color", value);
+      await setSetting(companyId, "smart-obra-accent-color", value);
       showToast("Cor de destaque salva!");
     } catch {
       showToast("Erro ao salvar cor de destaque.", "error");
@@ -1682,12 +1688,13 @@ const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
 };
 
 function TabNotificacoes() {
+  const { companyId } = useCompany();
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const saved = await getSetting("smart-obra-notification-prefs");
+        const saved = await getSetting(companyId, "smart-obra-notification-prefs");
         if (saved) setPrefs(saved as NotificationPrefs);
       } catch {
         // keep defaults
@@ -1700,7 +1707,7 @@ function TabNotificacoes() {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
     try {
-      await setSetting("smart-obra-notification-prefs", next);
+      await setSetting(companyId, "smart-obra-notification-prefs", next);
       showToast("Preferencias de notificacao salvas!");
     } catch {
       showToast("Erro ao salvar preferencias.", "error");

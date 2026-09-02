@@ -1,22 +1,24 @@
 ﻿import { createClient } from "@/lib/supabase/client";
 import { toCamelCase, toSnakeCase } from "@/lib/supabase/utils";
 
-export async function getMateriaisEstoque() {
+export async function getMateriaisEstoque(companyId: string) {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("materiais_estoque")
     .select("*")
+    .eq("company_id", companyId)
     .order("nome", { ascending: true });
   if (error) throw error;
   return (data || []).map((d: any) => toCamelCase(d));
 }
 
-export async function createMaterialEstoque(mat: any) {
+export async function createMaterialEstoque(companyId: string, mat: any) {
   const supabase = createClient();
   const dbData = toSnakeCase(mat);
   delete dbData.id;
   delete dbData.created_at;
   delete dbData.criado_em;
+  dbData.company_id = companyId;
   const { data, error } = await supabase
     .from("materiais_estoque")
     .insert(dbData)
@@ -26,12 +28,13 @@ export async function createMaterialEstoque(mat: any) {
   return toCamelCase(data as any);
 }
 
-export async function updateMaterialEstoque(id: string, updates: any) {
+export async function updateMaterialEstoque(companyId: string, id: string, updates: any) {
   const supabase = createClient();
   const dbData = toSnakeCase(updates);
   delete dbData.id;
   delete dbData.created_at;
   delete dbData.criado_em;
+  delete dbData.company_id;
   const { data, error } = await supabase
     .from("materiais_estoque")
     .update(dbData)
@@ -42,7 +45,7 @@ export async function updateMaterialEstoque(id: string, updates: any) {
   return toCamelCase(data as any);
 }
 
-export async function deleteMaterialEstoque(id: string) {
+export async function deleteMaterialEstoque(companyId: string, id: string) {
   const supabase = createClient();
   const { error } = await supabase
     .from("materiais_estoque")
