@@ -18,13 +18,37 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { nome, email, senha, telefone, empresa, cargo, mensagem } = body;
+    const { nome, email, telefone, empresa, cargo, mensagem } = body;
 
-    if (!nome || !email || !senha) {
+    if (!nome || !email) {
       return NextResponse.json(
-        { error: "Nome, email e senha sao obrigatorios" },
+        { error: "Nome e email sao obrigatorios" },
         { status: 400 }
       );
+    }
+
+    // Check if email already has a pending request
+    const { data: existing } = await supabaseAdmin
+      .from("access_requests")
+      .select("id, status")
+      .eq("email", email)
+      .in("status", ["pendente", "aprovado"])
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      const status = (existing[0] as any).status;
+      if (status === "pendente") {
+        return NextResponse.json(
+          { error: "Ja existe uma solicitacao pendente para este email" },
+          { status: 409 }
+        );
+      }
+      if (status === "aprovado") {
+        return NextResponse.json(
+          { error: "Este email ja possui acesso aprovado" },
+          { status: 409 }
+        );
+      }
     }
 
     const { data, error } = await supabaseAdmin
@@ -42,15 +66,6 @@ export async function POST(request: Request) {
       .single() as any;
 
     if (error) throw error;
-
-    // Store password temporarily in metadata (will be used on approval)
-    // We store it as user metadata since access_requests table doesn't have password
-    const { error: metaError } = await supabaseAdmin
-      .from("access_requests")
-      .update({ mensagem: body.mensagem ? `${body.mensagem}` : null } as any)
-      .eq("id", data.id);
-
-    // Note: password is handled during approval via Supabase Auth createUser
 
     return NextResponse.json(data, { status: 201 });
   } catch (error: any) {

@@ -42,7 +42,13 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      setError("Email ou senha invalidos");
+      if (result.error.includes("bloqueado") || result.error.includes("inativo")) {
+        setError("Sua conta esta bloqueada. Entre em contato com o administrador.");
+      } else if (result.error.includes("Perfil")) {
+        setError("Sua conta ainda nao foi configurada. Aguarde a aprovacao do administrador.");
+      } else {
+        setError("Email ou senha invalidos");
+      }
       setLoading(false);
     } else {
       router.push("/");
@@ -125,18 +131,19 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 space-y-3 text-center">
             <Link
               href="/solicitar-acesso"
-              className="text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
+              className="block text-sm text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
             >
               Solicitar acesso
             </Link>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Se voce solicitou acesso, aguarde a aprovacao do administrador.
+            </p>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-

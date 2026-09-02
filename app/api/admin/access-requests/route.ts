@@ -16,7 +16,22 @@ export async function GET() {
       .order("data_solicitacao", { ascending: false });
 
     if (error) throw error;
-    return NextResponse.json(data);
+
+    // Map DB columns to frontend-expected format
+    const mapped = (data || []).map((r: any) => ({
+      id: r.id,
+      name: r.nome,
+      email: r.email,
+      phone: r.telefone || "",
+      companyName: r.empresa || "",
+      cnpj: "",
+      status: r.status === "pendente" ? "PENDING" : r.status === "aprovado" ? "APPROVED" : "REJECTED",
+      createdAt: r.data_solicitacao,
+      cargo: r.cargo || "",
+      mensagem: r.mensagem || "",
+    }));
+
+    return NextResponse.json(mapped);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

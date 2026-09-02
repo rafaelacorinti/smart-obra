@@ -2,6 +2,11 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import crypto from "crypto";
+
+function generateTempPassword(): string {
+  return "Smart" + crypto.randomBytes(3).toString("hex") + "!";
+}
 
 export async function PATCH(
   request: Request,
@@ -14,7 +19,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, allowedModules, motivoRejeicao, senha } = body;
+    const { status, allowedModules, motivoRejeicao } = body;
 
     if (status === "aprovado") {
       const { data: accessReq, error: fetchError } = await supabaseAdmin
@@ -30,11 +35,18 @@ export async function PATCH(
         );
       }
 
-      const password = senha || "smart123";
+      if ((accessReq as any).status === "aprovado") {
+        return NextResponse.json(
+          { error: "Solicitacao ja foi aprovada" },
+          { status: 400 }
+        );
+      }
+
+      const tempPassword = generateTempPassword();
       const { data: authData, error: authError } =
         await supabaseAdmin.auth.admin.createUser({
-          email: accessReq.email,
-          password: password,
+          email: (accessReq as any).email,
+          password: tempPassword,
           email_confirm: true,
         });
 
@@ -49,11 +61,11 @@ export async function PATCH(
         .from("user_profiles")
         .insert({
           id: authData.user.id,
-          name: accessReq.nome,
-          email: accessReq.email,
+          name: (accessReq as any).nome,
+          email: (accessReq as any).email,
           role: "GESTOR",
-          company_name: accessReq.empresa,
-          phone: accessReq.telefone,
+          company_name: (accessReq as any).empresa,
+          phone: (accessReq as any).telefone,
           active: true,
           allowed_modules: allowedModules || [],
         } as any);
@@ -77,7 +89,11 @@ export async function PATCH(
         .single() as any;
 
       if (error) throw error;
-      return NextResponse.json(data);
+      return NextResponse.json({
+        ...data,
+        senhaTemporaria: tempPassword,
+        userId: authData.user.id,
+      });
     }
 
     if (status === "rejeitado") {
@@ -107,7 +123,7 @@ export async function PATCH(
         await supabaseAdmin
           .from("user_profiles")
           .update({ active: false } as any)
-          .eq("email", accessReq.email);
+          .eq("email", (accessReq as any).email);
       }
 
       const { data, error } = await supabaseAdmin
@@ -135,7 +151,7 @@ export async function PATCH(
         await supabaseAdmin
           .from("user_profiles")
           .update({ active: true } as any)
-          .eq("email", accessReq.email);
+          .eq("email", (accessReq as any).email);
       }
 
       const { data, error } = await supabaseAdmin
