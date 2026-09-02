@@ -1,4 +1,7 @@
 ﻿export type UserRole = "ADMIN" | "FINANCEIRO" | "GESTOR" | "TECNICO" | "VISUALIZADOR";
+export type CompanyRole = "owner" | "admin" | "manager" | "member";
+export type CompanyStatus = "active" | "suspended";
+export type CompanyPlan = "free" | "pro";
 export type ProjectStatus = "PLANNING" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELLED";
 export type ServiceOrderStatus = "OPEN" | "IN_PROGRESS" | "WAITING_MATERIAL" | "COMPLETED" | "CANCELLED";
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -6,6 +9,27 @@ export type FinancialType = "PAYABLE" | "RECEIVABLE";
 export type FinancialStatus = "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
 export type Plan = "FREE" | "PRO" | "ENTERPRISE";
 export type AccessRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface Company {
+  id: string;
+  name: string;
+  legalName: string;
+  documentNumber: string;
+  slug: string;
+  status: CompanyStatus;
+  plan: CompanyPlan;
+  logoUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserCompany {
+  companyId: string;
+  companyName: string;
+  companySlug: string;
+  role: CompanyRole;
+  status: string;
+}
 
 export interface DashboardStats {
   totalProjects: number;
@@ -30,7 +54,11 @@ export interface SessionUser {
   role: UserRole;
   companyId: string;
   companyName: string;
+  companyRole: CompanyRole;
+  companySlug: string;
+  isPlatformAdmin: boolean;
   allowedModules?: string[];
+  companies: UserCompany[];
 }
 
 export interface AccessRequest {
@@ -44,7 +72,6 @@ export interface AccessRequest {
   createdAt: string;
 }
 
-// Types used by dashboard modules
 export interface Contrato {
   id: string;
   obraId: string;

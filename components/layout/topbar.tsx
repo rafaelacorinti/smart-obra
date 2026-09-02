@@ -7,6 +7,7 @@ import { useSidebarStore } from "@/stores/use-sidebar-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useState, useEffect, useRef } from "react";
 import NotificationsPanel, { useNotificationCount } from "@/components/notifications-panel";
+import { CompanySwitcher } from "@/components/company-switcher";
 import { GlobalSearch } from "@/components/global-search";
 
 export function Topbar() {
@@ -52,13 +53,14 @@ export function Topbar() {
 
       <div className="flex items-center gap-2">
         <GlobalSearch />
+        <CompanySwitcher />
 
         {/* Notification bell with badge */}
         <div className="relative">
           <button
             onClick={() => setShowNotifications((prev) => !prev)}
             className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-            aria-label="Notificações"
+            aria-label="Notificacoes"
           >
             <Bell className="h-5 w-5" />
             {notifCount > 0 && (
@@ -128,3 +130,4 @@ export function Topbar() {
     </header>
   );
 }
+
