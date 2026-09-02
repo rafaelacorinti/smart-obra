@@ -131,6 +131,7 @@ export default function EmpresasPage() {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
   const [addMemberError, setAddMemberError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -259,13 +260,12 @@ export default function EmpresasPage() {
       setSearchingUsers(true);
       setAddMemberError("");
       setSelectedUser(null);
+      setHasSearched(false);
       const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(q)}`);
       if (!res.ok) throw new Error("Erro ao buscar usuarios");
       const data: UserResult[] = await res.json();
       setUserSearchResults(data);
-      if (data.length === 0) {
-        setAddMemberError("Nenhum usuario encontrado");
-      }
+      setHasSearched(true);
     } catch (err) {
       console.error(err);
       setAddMemberError("Erro ao buscar usuarios");
@@ -304,6 +304,7 @@ export default function EmpresasPage() {
     setSelectedUser(null);
     setNewMemberRole("member");
     setAddMemberError("");
+    setHasSearched(false);
   };
 
   const filteredCompanies = companies.filter((c) =>
@@ -610,21 +611,44 @@ export default function EmpresasPage() {
                   variant="secondary"
                   onClick={handleSearchUsers}
                   disabled={searchingUsers || userSearchQuery.trim().length < 2}
+                  className="shrink-0"
                 >
                   {searchingUsers ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <Search className="h-4 w-4" />
+                    <Search className="h-4 w-4 mr-2" />
                   )}
+                  Buscar
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Digite o email ou nome e clique em Buscar (ou pressione Enter)
+              </p>
             </div>
+
+            {/* Loading state */}
+            {searchingUsers && (
+              <div className="flex items-center justify-center gap-2 py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Buscando usuarios...</p>
+              </div>
+            )}
+
+            {/* No results message */}
+            {hasSearched && !searchingUsers && userSearchResults.length === 0 && !addMemberError && (
+              <div className="flex items-center gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Nenhum usuario encontrado. Verifique se o email esta correto.
+                </p>
+              </div>
+            )}
 
             {/* Search results */}
             {userSearchResults.length > 0 && (
               <div>
                 <Label className="text-xs text-muted-foreground">
-                  {userSearchResults.length} usuario(s) encontrado(s)
+                  {userSearchResults.length} usuario(s) encontrado(s) — clique para selecionar
                 </Label>
                 <div className="mt-1.5 max-h-48 overflow-y-auto space-y-1 border rounded-md p-1">
                   {userSearchResults.map((user) => (
@@ -646,13 +670,20 @@ export default function EmpresasPage() {
               </div>
             )}
 
+            {/* Prompt to select user */}
+            {userSearchResults.length > 0 && !selectedUser && (
+              <p className="text-xs text-muted-foreground text-center">
+                Selecione um usuario acima para adicionar como membro
+              </p>
+            )}
+
             {/* Selected user confirmation */}
             {selectedUser && (
               <div className="flex items-center gap-2 p-3 rounded-md bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-800">
                 <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{selectedUser.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{selectedUser.email}</p>
+                  <p className="text-sm font-medium">Usuario selecionado:</p>
+                  <p className="text-sm truncate">{selectedUser.name} ({selectedUser.email})</p>
                 </div>
               </div>
             )}
@@ -681,13 +712,24 @@ export default function EmpresasPage() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddMember(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddMember} disabled={saving || !selectedUser}>
-              {saving ? "Adicionando..." : "Adicionar"}
-            </Button>
+          <DialogFooter className="flex-col sm:flex-col gap-2">
+            {!selectedUser && (
+              <p className="text-xs text-muted-foreground text-center w-full">
+                {!hasSearched
+                  ? "Busque e selecione um usuario para habilitar o botao Adicionar"
+                  : userSearchResults.length > 0
+                    ? "Selecione um usuario da lista para habilitar o botao Adicionar"
+                    : "Busque um usuario para continuar"}
+              </p>
+            )}
+            <div className="flex justify-end gap-2 w-full">
+              <Button variant="outline" onClick={() => setShowAddMember(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAddMember} disabled={saving || !selectedUser}>
+                {saving ? "Adicionando..." : "Adicionar"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
