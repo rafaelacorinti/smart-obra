@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
-import { Check, X, Clock, Loader2, Copy, CheckCircle2, Shield, Ban, Unlock } from "lucide-react";
+import { Check, X, Clock, Loader2, Copy, CheckCircle2, Shield, Ban, Unlock, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { AccessRequest } from "@/types";
 
@@ -11,6 +11,7 @@ export default function AccessRequestsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [tempPassword, setTempPassword] = useState<{ id: string; password: string; email: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRequests();
@@ -32,14 +33,20 @@ export default function AccessRequestsPage() {
 
   const handleApprove = async (id: string) => {
     setActionLoading(id);
+    setErrorMsg(null);
     try {
+      console.log("[handleApprove] Enviando PATCH para /api/access-requests/" + id, { status: "aprovado" });
       const response = await fetch(`/api/access-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "aprovado" }),
       });
+
+      console.log("[handleApprove] Response status:", response.status);
+      const data = await response.json();
+      console.log("[handleApprove] Response data:", data);
+
       if (response.ok) {
-        const data = await response.json();
         setRequests((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: "APPROVED" as const } : r))
         );
@@ -53,12 +60,13 @@ export default function AccessRequestsPage() {
           setCopied(false);
         }
       } else {
-        const errorData = await response.json();
-        alert(errorData.error || "Erro ao aprovar solicitacao");
+        const msg = data.error || `Erro ${response.status} ao aprovar solicitacao`;
+        console.error("[handleApprove] Erro:", msg);
+        setErrorMsg(msg);
       }
-    } catch (error) {
-      console.error("Erro ao aprovar:", error);
-      alert("Erro ao aprovar solicitacao");
+    } catch (error: any) {
+      console.error("[handleApprove] Erro de rede:", error);
+      setErrorMsg("Erro de conexao ao aprovar solicitacao: " + (error.message || "verifique sua rede"));
     } finally {
       setActionLoading(null);
     }
@@ -66,6 +74,7 @@ export default function AccessRequestsPage() {
 
   const handleReject = async (id: string) => {
     setActionLoading(id);
+    setErrorMsg(null);
     try {
       const response = await fetch(`/api/access-requests/${id}`, {
         method: "PATCH",
@@ -76,9 +85,13 @@ export default function AccessRequestsPage() {
         setRequests((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: "REJECTED" as const } : r))
         );
+      } else {
+        const data = await response.json();
+        setErrorMsg(data.error || "Erro ao rejeitar solicitacao");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao rejeitar:", error);
+      setErrorMsg("Erro de conexao ao rejeitar solicitacao");
     } finally {
       setActionLoading(null);
     }
@@ -86,6 +99,7 @@ export default function AccessRequestsPage() {
 
   const handleBlock = async (id: string) => {
     setActionLoading(id);
+    setErrorMsg(null);
     try {
       const response = await fetch(`/api/access-requests/${id}`, {
         method: "PATCH",
@@ -96,9 +110,13 @@ export default function AccessRequestsPage() {
         setRequests((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: "REJECTED" as const } : r))
         );
+      } else {
+        const data = await response.json();
+        setErrorMsg(data.error || "Erro ao bloquear usuario");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao bloquear:", error);
+      setErrorMsg("Erro de conexao ao bloquear usuario");
     } finally {
       setActionLoading(null);
     }
@@ -106,6 +124,7 @@ export default function AccessRequestsPage() {
 
   const handleUnblock = async (id: string) => {
     setActionLoading(id);
+    setErrorMsg(null);
     try {
       const response = await fetch(`/api/access-requests/${id}`, {
         method: "PATCH",
@@ -116,9 +135,13 @@ export default function AccessRequestsPage() {
         setRequests((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: "APPROVED" as const } : r))
         );
+      } else {
+        const data = await response.json();
+        setErrorMsg(data.error || "Erro ao desbloquear usuario");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao desbloquear:", error);
+      setErrorMsg("Erro de conexao ao desbloquear usuario");
     } finally {
       setActionLoading(null);
     }
@@ -152,6 +175,22 @@ export default function AccessRequestsPage() {
           { label: "Acessos" },
         ]}
       />
+
+      {/* Error banner */}
+      {errorMsg && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">{errorMsg}</p>
+          </div>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="flex-shrink-0 rounded-lg p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Temp password dialog */}
       {tempPassword && (
@@ -288,15 +327,47 @@ export default function AccessRequestsPage() {
                   <p className="font-medium">{request.name}</p>
                   <p className="text-sm text-muted-foreground">{request.email} - {request.companyName}</p>
                 </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    request.status === "APPROVED"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                  }`}
-                >
-                  {request.status === "APPROVED" ? "Aprovado" : "Rejeitado"}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      request.status === "APPROVED"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    }`}
+                  >
+                    {request.status === "APPROVED" ? "Aprovado" : "Rejeitado"}
+                  </span>
+                  {request.status === "APPROVED" && (
+                    <button
+                      onClick={() => handleBlock(request.id)}
+                      disabled={actionLoading === request.id}
+                      className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"
+                      title="Bloquear acesso"
+                    >
+                      {actionLoading === request.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Ban className="h-3.5 w-3.5" />
+                      )}
+                      Bloquear
+                    </button>
+                  )}
+                  {request.status === "REJECTED" && (
+                    <button
+                      onClick={() => handleUnblock(request.id)}
+                      disabled={actionLoading === request.id}
+                      className="flex items-center gap-1 rounded-lg border border-green-200 px-2.5 py-1.5 text-xs font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-50 dark:border-green-900/50 dark:text-green-400 dark:hover:bg-green-950/30"
+                      title="Desbloquear acesso"
+                    >
+                      {actionLoading === request.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Unlock className="h-3.5 w-3.5" />
+                      )}
+                      Desbloquear
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

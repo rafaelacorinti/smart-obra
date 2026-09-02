@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -14,8 +14,13 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
+    console.log("[admin approve] session user:", session?.user ? { role: (session.user as any).role, email: session.user?.email } : "sem sessao");
+
     if (!session || (session.user as any).role !== "ADMIN") {
-      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Nao autorizado - apenas administradores podem aprovar solicitacoes" },
+        { status: 401 }
+      );
     }
 
     const { data: accessReq, error: fetchError } = await supabaseAdmin
@@ -25,15 +30,18 @@ export async function PATCH(
       .single();
 
     if (fetchError || !accessReq) {
+      console.error("[admin approve] Solicitacao nao encontrada:", fetchError);
       return NextResponse.json(
         { error: "Solicitacao nao encontrada" },
         { status: 404 }
       );
     }
 
+    console.log("[admin approve] Solicitacao encontrada:", { email: (accessReq as any).email, status: (accessReq as any).status });
+
     if ((accessReq as any).status === "aprovado") {
       return NextResponse.json(
-        { error: "Solicitacao ja foi aprovada" },
+        { error: "Solicitacao ja foi aprovada anteriormente" },
         { status: 400 }
       );
     }
@@ -50,11 +58,14 @@ export async function PATCH(
       });
 
     if (authError) {
+      console.error("[admin approve] Erro ao criar usuario auth:", authError);
       return NextResponse.json(
         { error: "Erro ao criar usuario: " + authError.message },
         { status: 500 }
       );
     }
+
+    console.log("[admin approve] Usuario auth criado:", authData.user.id);
 
     // 3. Create user profile
     const { error: profileError } = await supabaseAdmin
@@ -71,13 +82,16 @@ export async function PATCH(
       } as any);
 
     if (profileError) {
+      console.error("[admin approve] Erro ao criar perfil:", profileError);
       // Rollback: delete created auth user
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
-        { error: "Erro ao criar perfil: " + profileError.message },
+        { error: "Erro ao criar perfil do usuario: " + profileError.message },
         { status: 500 }
       );
     }
+
+    console.log("[admin approve] Perfil criado com sucesso");
 
     // 4. Update access request status
     const { data, error } = await supabaseAdmin
@@ -90,7 +104,12 @@ export async function PATCH(
       .select()
       .single() as any;
 
-    if (error) throw error;
+    if (error) {
+      console.error("[admin approve] Erro ao atualizar solicitacao:", error);
+      throw error;
+    }
+
+    console.log("[admin approve] Aprovacao concluida com sucesso");
 
     return NextResponse.json({
       ...data,
@@ -98,6 +117,10 @@ export async function PATCH(
       userId: authData.user.id,
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[admin approve] Erro inesperado:", error);
+    return NextResponse.json(
+      { error: error.message || "Erro interno do servidor" },
+      { status: 500 }
+    );
   }
 }

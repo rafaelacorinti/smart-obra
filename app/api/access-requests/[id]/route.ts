@@ -14,12 +14,18 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
+    console.log("[access-requests PATCH] session user:", session?.user ? { role: (session.user as any).role, email: session.user?.email } : "sem sessao");
+
     if (!session || (session.user as any).role !== "ADMIN") {
-      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Nao autorizado - apenas administradores podem realizar esta acao" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
     const { status, allowedModules, motivoRejeicao } = body;
+    console.log("[access-requests PATCH] id:", params.id, "status:", status);
 
     if (status === "aprovado") {
       const { data: accessReq, error: fetchError } = await supabaseAdmin
@@ -29,20 +35,24 @@ export async function PATCH(
         .single();
 
       if (fetchError || !accessReq) {
+        console.error("[access-requests PATCH] Solicitacao nao encontrada:", fetchError);
         return NextResponse.json(
           { error: "Solicitacao nao encontrada" },
           { status: 404 }
         );
       }
 
+      console.log("[access-requests PATCH] Solicitacao encontrada:", { email: (accessReq as any).email, status: (accessReq as any).status });
+
       if ((accessReq as any).status === "aprovado") {
         return NextResponse.json(
-          { error: "Solicitacao ja foi aprovada" },
+          { error: "Solicitacao ja foi aprovada anteriormente" },
           { status: 400 }
         );
       }
 
       const tempPassword = generateTempPassword();
+
       const { data: authData, error: authError } =
         await supabaseAdmin.auth.admin.createUser({
           email: (accessReq as any).email,
@@ -51,11 +61,14 @@ export async function PATCH(
         });
 
       if (authError) {
+        console.error("[access-requests PATCH] Erro ao criar usuario auth:", authError);
         return NextResponse.json(
           { error: "Erro ao criar usuario: " + authError.message },
           { status: 500 }
         );
       }
+
+      console.log("[access-requests PATCH] Usuario auth criado:", authData.user.id);
 
       const { error: profileError } = await supabaseAdmin
         .from("user_profiles")
@@ -71,11 +84,60 @@ export async function PATCH(
         } as any);
 
       if (profileError) {
+        console.error("[access-requests PATCH] Erro ao criar perfil:", profileError);
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
         return NextResponse.json(
-          { error: "Erro ao criar perfil: " + profileError.message },
+          { error: "Erro ao criar perfil do usuario: " + profileError.message },
           { status: 500 }
         );
+      }
+
+      console.log("[access-requests PATCH] Perfil criado com sucesso");
+
+      // Link user to a company via user_companies
+      const empresaNome = (accessReq as any).empresa;
+      if (empresaNome) {
+        const { data: existingCompany } = await supabaseAdmin
+          .from("companies")
+          .select("id")
+          .ilike("name", empresaNome)
+          .limit(1)
+          .maybeSingle();
+
+        let companyId: string | null = existingCompany?.id || null;
+
+        if (!companyId) {
+          const slug = empresaNome
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+
+          const { data: newCompany } = await supabaseAdmin
+            .from("companies")
+            .insert({
+              name: empresaNome,
+              slug: slug || "empresa-" + Date.now(),
+              status: "active",
+              plan: "free",
+            })
+            .select("id")
+            .single();
+
+          companyId = newCompany?.id || null;
+        }
+
+        if (companyId) {
+          await supabaseAdmin
+            .from("user_companies")
+            .insert({
+              company_id: companyId,
+              user_id: authData.user.id,
+              role: "admin",
+              status: "active",
+            });
+        }
       }
 
       const { data, error } = await supabaseAdmin
@@ -88,7 +150,12 @@ export async function PATCH(
         .select()
         .single() as any;
 
-      if (error) throw error;
+      if (error) {
+        console.error("[access-requests PATCH] Erro ao atualizar solicitacao:", error);
+        throw error;
+      }
+
+      console.log("[access-requests PATCH] Aprovacao concluida com sucesso");
       return NextResponse.json({
         ...data,
         senhaTemporaria: tempPassword,
@@ -108,7 +175,10 @@ export async function PATCH(
         .select()
         .single() as any;
 
-      if (error) throw error;
+      if (error) {
+        console.error("[access-requests PATCH] Erro ao rejeitar:", error);
+        throw error;
+      }
       return NextResponse.json(data);
     }
 
@@ -136,7 +206,10 @@ export async function PATCH(
         .select()
         .single() as any;
 
-      if (error) throw error;
+      if (error) {
+        console.error("[access-requests PATCH] Erro ao bloquear:", error);
+        throw error;
+      }
       return NextResponse.json(data);
     }
 
@@ -164,13 +237,20 @@ export async function PATCH(
         .select()
         .single() as any;
 
-      if (error) throw error;
+      if (error) {
+        console.error("[access-requests PATCH] Erro ao desbloquear:", error);
+        throw error;
+      }
       return NextResponse.json(data);
     }
 
     return NextResponse.json({ error: "Status invalido" }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[access-requests PATCH] Erro inesperado:", error);
+    return NextResponse.json(
+      { error: error.message || "Erro interno do servidor" },
+      { status: 500 }
+    );
   }
 }
 
