@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -14,19 +14,35 @@ export async function GET(
     }
 
     const supabase = createAdminClient();
-    const { data, error } = await supabase
+    const { data: members, error: membersError } = await supabase
       .from("user_companies")
-      .select("*, user_profiles!user_companies_user_id_fkey(name, email)")
+      .select("*")
       .eq("company_id", params.id)
       .order("created_at", { ascending: false });
-    if (error) throw error;
+    if (membersError) throw membersError;
 
-    const result = (data || []).map((d: any) => ({
-      ...d,
-      user_name: d.user_profiles?.name || null,
-      user_email: d.user_profiles?.email || null,
-      user_profiles: undefined,
-    }));
+    if (!members || members.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    const userIds = members.map((m: any) => m.user_id);
+    const { data: profiles } = await supabase
+      .from("user_profiles")
+      .select("id, name, email")
+      .in("id", userIds);
+
+    const profileMap = new Map(
+      (profiles || []).map((p: any) => [p.id, p])
+    );
+
+    const result = members.map((d: any) => {
+      const profile = profileMap.get(d.user_id);
+      return {
+        ...d,
+        user_name: profile?.name || null,
+        user_email: profile?.email || null,
+      };
+    });
 
     return NextResponse.json(result);
   } catch (err: any) {

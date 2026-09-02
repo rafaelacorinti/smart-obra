@@ -453,7 +453,10 @@ export default function EmpresasPage() {
               </CardHeader>
               <CardContent>
                 {loadingMembers ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Carregando...</p>
+                  <div className="flex flex-col items-center justify-center py-6 gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Carregando membros...</p>
+                  </div>
                 ) : members.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">Nenhum membro</p>
                 ) : (
